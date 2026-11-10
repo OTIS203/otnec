@@ -91,8 +91,8 @@ export default function AlertsPage() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-300 mt-1 leading-relaxed">{alt.description}</p>
-                <span className="text-[10px] text-slate-400 font-mono mt-2 block">
-                  Category: {alt.category} • Detected at: {new Date(alt.created_at).toLocaleString()}
+                <span suppressHydrationWarning className="text-[10px] text-slate-400 font-mono mt-2 block">
+                  Category: {alt.category} • Detected at: {new Date(alt.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </span>
               </div>
             </div>

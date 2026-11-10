@@ -151,8 +151,8 @@ export default function DashboardPage() {
               <div className="flex-1 text-xs">
                 <div className="flex items-center justify-between">
                   <span className="font-semibold text-white">{alt.title}</span>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    {new Date(alt.created_at).toLocaleTimeString()}
+                  <span suppressHydrationWarning className="text-[10px] text-slate-400 font-mono">
+                    {new Date(alt.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
                 <p className="text-slate-300 mt-1 leading-relaxed">{alt.description}</p>
