@@ -26,3 +26,4 @@ repos:
     hooks:
       - id: prettier
         files: ^frontend/.*\.(ts|tsx|js|jsx|json|css|md)$
+

@@ -85,3 +85,4 @@ export function SecurityScoreGauge({ score }: Props) {
     </div>
   );
 }
+

@@ -99,3 +99,4 @@ sudo systemctl enable --now netscope-agent
 # Run from Administrator PowerShell:
 .\netscope-agent.exe --server http://localhost:8000 --token YOUR_ENROLL_TOKEN --daemon
 ```
+

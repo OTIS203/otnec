@@ -63,3 +63,4 @@ def test_pdf_report_generation():
     assert isinstance(pdf_bytes, bytes)
     assert len(pdf_bytes) > 500
     assert pdf_bytes.startswith(b"%PDF")
+

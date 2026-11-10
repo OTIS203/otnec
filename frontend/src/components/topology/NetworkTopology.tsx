@@ -93,3 +93,4 @@ export function NetworkTopology({ devices }: Props) {
     </div>
   );
 }
+

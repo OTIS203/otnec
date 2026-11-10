@@ -100,3 +100,4 @@ message ReportAck {
   bool success = 1;
   string message = 2;
 }
+

@@ -68,3 +68,4 @@ export interface NetworkMetric {
   packet_loss_pct: number;
   dns_rtt_ms: number;
 }
+

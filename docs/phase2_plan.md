@@ -98,3 +98,4 @@ To identify the exact physical switch port where an unauthorized device is plugg
 1. **Bridge MIB Polling (`dot1dTpFdbTable` - 1.3.6.1.2.1.17.4.3):** Resolves MAC address to bridge port number.
 2. **Interface MIB Polling (`ifTable` - 1.3.6.1.2.1.2):** Maps bridge port number to physical interface label (e.g. `GigabitEthernet1/0/14`).
 3. **LLDP / CDP Polling:** Auto-discovers interconnects between switches, routers, and access points.
+

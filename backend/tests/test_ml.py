@@ -46,3 +46,4 @@ def test_baseline_tracker_new_port_anomaly():
         timestamp=now,
     )
     assert is_anomaly is True
+

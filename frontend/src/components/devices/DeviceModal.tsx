@@ -137,3 +137,4 @@ export function DeviceModal({ device, onClose, onRefresh }: Props) {
     </div>
   );
 }
+

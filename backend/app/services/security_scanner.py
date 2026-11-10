@@ -118,3 +118,4 @@ def detect_arp_spoofing(arp_table: Dict[str, str], gateway_ip: str) -> List[Secu
             )
 
     return vulns
+

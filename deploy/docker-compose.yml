@@ -107,3 +107,4 @@ services:
 volumes:
   timescale_data:
   redis_data:
+

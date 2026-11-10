@@ -46,3 +46,4 @@ To power on a sleeping device (e.g. NAS or desktop PC):
 Navigate to the top-right header or API endpoint:
 - **CSV Export (`/api/v1/reports/export/csv`):** Complete device inventory with MAC, IP, vendor, open ports, and last seen timestamps.
 - **Executive PDF Report (`/api/v1/reports/export/pdf`):** Formal security audit scorecard, including executive summary, discovered inventory, and prioritized remediation steps for IT directors and compliance officers.
+

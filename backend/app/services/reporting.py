@@ -180,3 +180,4 @@ def generate_pdf_report(network: Network, devices: List[Device], alerts: List[Al
     doc.build(elements)
     buffer.seek(0)
     return buffer.getvalue()
+

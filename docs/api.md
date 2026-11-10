@@ -124,3 +124,4 @@ Clients establish a persistent WebSocket connection:
 ### Event Types:
 - `ALERT_CREATED`: Emitted immediately when a new device connects, IP changes, or vulnerability is identified.
 - `NETWORK_UPDATED`: Emitted on scan completion with updated security score and online device totals.
+

@@ -21,3 +21,4 @@ RUN setcap cap_net_raw,cap_net_admin=+ep /usr/local/bin/netscope-agent
 
 ENTRYPOINT ["/usr/local/bin/netscope-agent"]
 CMD ["--help"]
+

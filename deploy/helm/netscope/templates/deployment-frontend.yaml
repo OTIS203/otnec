@@ -30,3 +30,4 @@ spec:
               protocol: TCP
           resources:
             {{- toYaml .Values.resources.frontend | nindent 12 }}
+

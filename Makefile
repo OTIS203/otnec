@@ -28,3 +28,4 @@ docker-up:
 
 docker-down:
 	docker compose -f deploy/docker-compose.yml down
+
