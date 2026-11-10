@@ -1,0 +1,37 @@
+version: '3.8'
+
+networks:
+  simulated_lan:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.100.0/24
+          gateway: 192.168.100.1
+
+services:
+  mock_router:
+    image: alpine:3.19
+    container_name: mock-router
+    networks:
+      simulated_lan:
+        ipv4_address: 192.168.100.1
+    command: ["sh", "-c", "nc -lk -p 80 -e echo 'HTTP/1.0 200 OK\r\nServer: NetScope-Router-OS\r\n\r\n'"]
+
+  mock_camera_vulnerable:
+    image: alpine:3.19
+    container_name: mock-camera
+    networks:
+      simulated_lan:
+        ipv4_address: 192.168.100.50
+    # Simulate open Telnet (port 23) and RTSP (port 554)
+    command: ["sh", "-c", "nc -lk -p 23 -e echo 'Telnet service ready\r\n' & nc -lk -p 554 -e echo 'RTSP/1.0 200 OK\r\n' & wait"]
+
+  mock_printer:
+    image: alpine:3.19
+    container_name: mock-printer
+    networks:
+      simulated_lan:
+        ipv4_address: 192.168.100.75
+    # Simulate JetDirect raw print port 9100
+    command: ["sh", "-c", "nc -lk -p 9100 -e echo 'HP JetDirect ready\r\n'"]
+
