@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package netscope.v1;
+
+option go_package = "github.com/netscope/netscope/agent/pkg/pb/v1;netscopev1";
+
+service AgentService {
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  rpc StreamTelemetry(stream TelemetryBatch) returns (StreamAck);
+  rpc ReportScanResults(ScanReport) returns (ReportAck);
+}
+
+message HeartbeatRequest {
+  string agent_id = 1;
+  int64 timestamp = 2;
+  string agent_version = 3;
+  AgentHealth health = 4;
+}
+
+message AgentHealth {
+  float cpu_usage_pct = 1;
+  float memory_usage_mb = 2;
+  int32 queued_events_count = 3;
+}
+
+message HeartbeatResponse {
+  bool acknowledge = 1;
+  int64 next_interval_seconds = 2;
+  repeated Command commands = 3;
+}
+
+message TelemetryBatch {
+  string agent_id = 1;
+  string network_id = 2;
+  int64 batch_timestamp = 3;
+  repeated DeviceDiscovered devices = 4;
+  repeated NetworkMetricPoint metrics = 5;
+  repeated SecurityEvent security_events = 6;
+}
+
+message DeviceDiscovered {
+  string mac_address = 1;
+  string ip_address = 2;
+  string hostname = 3;
+  string vendor = 4;
+  string os_fingerprint = 5;
+  string device_type_hint = 6;
+  repeated DiscoveredPort open_ports = 7;
+  bool is_alive = 8;
+  int64 observed_at = 9;
+}
+
+message DiscoveredPort {
+  int32 port = 1;
+  string protocol = 2; // "tcp" | "udp"
+  string service_name = 3;
+  string banner = 4;
+  bool is_risky = 5;
+}
+
+message NetworkMetricPoint {
+  int64 recorded_at = 1;
+  float latency_ms = 2;
+  float jitter_ms = 3;
+  float packet_loss_pct = 4;
+  float dns_rtt_ms = 5;
+}
+
+message SecurityEvent {
+  string event_type = 1; // "ROGUE_DHCP" | "ARP_SPOOF" | "RISKY_PORT"
+  string source_mac = 2;
+  string source_ip = 3;
+  string description = 4;
+  string severity = 5;   // "info" | "warning" | "critical"
+  int64 timestamp = 6;
+}
+
+message Command {
+  string command_id = 1;
+  string action = 2; // "SCAN_NOW" | "CONFIG_CHANGE" | "WAKE_ON_LAN"
+  map<string, string> parameters = 3;
+}
+
+message StreamAck {
+  bool success = 1;
+  int32 accepted_events = 2;
+}
+
+message ScanReport {
+  string scan_id = 1;
+  string network_id = 2;
+  int64 started_at = 3;
+  int64 completed_at = 4;
+  int32 total_hosts_scanned = 5;
+  int32 active_hosts_found = 6;
+  repeated DeviceDiscovered host_details = 7;
+}
+
+message ReportAck {
+  bool success = 1;
+  string message = 2;
+}

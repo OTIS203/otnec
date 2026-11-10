@@ -1,0 +1,87 @@
+# OS & Editor files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Git / Brain / System
+.system_generated/
+*.tmp
+*.log
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+*.pfx
+
+# Go
+agent/bin/
+agent/dist/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+coverage.out
+coverage.html
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+venv/
+.venv/
+ENV/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/coverage/
+.npm
+.yarn/
+*.tsbuildinfo
+
+# Database / Local volumes
+timescale_data/
+redis_data/
+*.sqlite
+*.sqlite3
+*.db
+
+# Terraform / Helm local package
+*.tgz

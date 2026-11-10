@@ -1,0 +1,109 @@
+services:
+  timescaledb:
+    image: timescale/timescaledb:latest-pg16
+    container_name: netscope-timescaledb
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-netscope}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-netscope_secure_password}
+      POSTGRES_DB: ${POSTGRES_DB:-netscope_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - timescale_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-netscope} -d ${POSTGRES_DB:-netscope_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: netscope-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile.backend
+    container_name: netscope-backend
+    restart: unless-stopped
+    environment:
+      - NETSCOPE_ENV=production
+      - NETSCOPE_PORT=8000
+      - NETSCOPE_SECRET_KEY=${NETSCOPE_SECRET_KEY:-netscope-secret-change-me-32chars}
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-netscope}:${POSTGRES_PASSWORD:-netscope_secure_password}@timescaledb:5432/${POSTGRES_DB:-netscope_db}
+      - DATABASE_SYNC_URL=postgresql://${POSTGRES_USER:-netscope}:${POSTGRES_PASSWORD:-netscope_secure_password}@timescaledb:5432/${POSTGRES_DB:-netscope_db}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    ports:
+      - "8000:8000"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery_worker:
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile.backend
+    container_name: netscope-celery-worker
+    restart: unless-stopped
+    command: ["celery", "-A", "app.workers.celery_app", "worker", "--loglevel=info"]
+    environment:
+      - NETSCOPE_ENV=production
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-netscope}:${POSTGRES_PASSWORD:-netscope_secure_password}@timescaledb:5432/${POSTGRES_DB:-netscope_db}
+      - DATABASE_SYNC_URL=postgresql://${POSTGRES_USER:-netscope}:${POSTGRES_PASSWORD:-netscope_secure_password}@timescaledb:5432/${POSTGRES_DB:-netscope_db}
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile.frontend
+    container_name: netscope-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NEXT_PUBLIC_WS_URL=ws://localhost:8000/api/v1/ws/live
+    depends_on:
+      - backend
+
+  agent:
+    build:
+      context: ..
+      dockerfile: deploy/docker/Dockerfile.agent
+    container_name: netscope-agent
+    restart: unless-stopped
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      - NETSCOPE_SERVER=http://localhost:8000
+      - NETSCOPE_ENROLL_TOKEN=demo-token
+    depends_on:
+      - backend
+
+volumes:
+  timescale_data:
+  redis_data:

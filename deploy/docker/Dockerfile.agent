@@ -1,0 +1,23 @@
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /src
+
+RUN apk add --no-cache git gcc musl-dev libpcap-dev
+
+COPY agent/go.mod agent/go.sum* ./
+RUN go mod download || true
+
+COPY agent/ ./
+RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o /bin/netscope-agent ./cmd/netscope-agent
+
+FROM alpine:3.19 AS runner
+
+RUN apk add --no-cache libpcap ca-certificates iproute2 libcap
+
+COPY --from=builder /bin/netscope-agent /usr/local/bin/netscope-agent
+
+# Grant minimal network capabilities instead of requiring root
+RUN setcap cap_net_raw,cap_net_admin=+ep /usr/local/bin/netscope-agent
+
+ENTRYPOINT ["/usr/local/bin/netscope-agent"]
+CMD ["--help"]
