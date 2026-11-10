@@ -385,3 +385,4 @@ $$\text{SecurityScore} = 100 - (\Delta_{\text{Ports}} + \Delta_{\text{Protocols}
    - Devices running outdated service banners: $-5$ pts.
 4. **Credential Verification ($\Delta_{\text{Protocols}}$, max 10 pts):**
    - Any confirmed default credential (e.g. `admin/admin` on camera/router): $-20$ pts (clamped to floor 0).
+

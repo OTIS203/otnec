@@ -126,3 +126,4 @@ NetScope implements the **STRIDE** methodology (Spoofing, Tampering, Repudiation
 2. **Least Privilege Principle:** Backend processes run as unprivileged UID 10001; agent operates with minimal kernel capabilities.
 3. **Local-First & Privacy by Default:** Data collection restricted strictly to network metadata. No payload interception, no packet content sniffing, no DNS payload interception beyond standard local query benchmarking.
 4. **Zero Exploitation Policy:** Scanners conduct detection-only probes; credential verification is strictly opt-in, non-destructive, and limited to single-attempt dictionary checks with strict lock-out prevention.
+

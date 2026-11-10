@@ -60,3 +60,4 @@ postgresql:
 redis:
   enabled: true
   architecture: standalone
+
