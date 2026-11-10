@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle, Filter, ShieldAlert } from "lucide-react";
+import { ClientTime } from "@/components/common/ClientTime";
 import { Alert } from "@/types";
 import { MOCK_ALERTS, fetchAlerts } from "@/lib/api";
 
@@ -91,8 +92,8 @@ export default function AlertsPage() {
                   </span>
                 </div>
                 <p className="text-xs text-slate-300 mt-1 leading-relaxed">{alt.description}</p>
-                <span suppressHydrationWarning className="text-[10px] text-slate-400 font-mono mt-2 block">
-                  Category: {alt.category} • Detected at: {new Date(alt.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                <span className="text-[10px] text-slate-400 font-mono mt-2 block">
+                  Category: {alt.category} • Detected at: <ClientTime isoString={alt.created_at} format="time" />
                 </span>
               </div>
             </div>

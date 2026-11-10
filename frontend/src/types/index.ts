@@ -69,3 +69,36 @@ export interface NetworkMetric {
   dns_rtt_ms: number;
 }
 
+export interface DNSQueryLog {
+  id: string;
+  network_id: string;
+  client_ip: string;
+  client_hostname?: string;
+  domain: string;
+  category: string;
+  service_name: string;
+  is_blocked: boolean;
+  query_type: string;
+  queried_at: string;
+}
+
+export interface FilterPolicy {
+  id: string;
+  network_id: string;
+  block_social_media: boolean;
+  block_streaming: boolean;
+  block_gaming: boolean;
+  custom_blacklist: string[];
+  custom_whitelist: string[];
+  updated_at: string;
+}
+
+export interface DNSStats {
+  total_queries: number;
+  blocked_queries: number;
+  social_queries: number;
+  allowed_queries: number;
+  top_social_apps: { name: string; count: number }[];
+  top_devices: { ip: string; hostname: string; count: number }[];
+}
+

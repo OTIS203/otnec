@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Network,
   Settings,
+  Shield,
   ShieldAlert,
 } from "lucide-react";
 
@@ -17,6 +18,7 @@ const navigation = [
   { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Device Inventory", href: "/devices", icon: HardDrive },
   { name: "Network Map", href: "/topology", icon: Network },
+  { name: "Traffic Guard", href: "/filtering", icon: Shield },
   { name: "Security Alerts", href: "/alerts", icon: ShieldAlert },
   { name: "Settings & Agent", href: "/settings", icon: Settings },
 ];

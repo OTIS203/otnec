@@ -159,3 +159,32 @@ class AuditLog(Base):
     metadata_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
+
+class DNSQueryLog(Base):
+    __tablename__ = "dns_query_logs"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    network_id: Mapped[str] = mapped_column(String(36), ForeignKey("networks.id"), nullable=False)
+    client_ip: Mapped[str] = mapped_column(String(45), nullable=False)
+    client_hostname: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    domain: Mapped[str] = mapped_column(String(255), nullable=False)
+    category: Mapped[str] = mapped_column(String(50), nullable=False, default="General")
+    service_name: Mapped[str] = mapped_column(String(100), nullable=False, default="Standard Web")
+    is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
+    query_type: Mapped[str] = mapped_column(String(10), default="A")
+    queried_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+
+class FilterPolicy(Base):
+    __tablename__ = "filter_policies"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=generate_uuid)
+    network_id: Mapped[str] = mapped_column(String(36), ForeignKey("networks.id"), unique=True, nullable=False)
+    block_social_media: Mapped[bool] = mapped_column(Boolean, default=True)
+    block_streaming: Mapped[bool] = mapped_column(Boolean, default=False)
+    block_gaming: Mapped[bool] = mapped_column(Boolean, default=False)
+    custom_blacklist: Mapped[str] = mapped_column(Text, default="[]")
+    custom_whitelist: Mapped[str] = mapped_column(Text, default="[]")
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+
+

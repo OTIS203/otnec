@@ -1,4 +1,4 @@
-import { Alert, Device, Network, NetworkMetric } from "@/types";
+import { Alert, Device, Network, NetworkMetric, DNSQueryLog, FilterPolicy, DNSStats } from "@/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -207,4 +207,64 @@ export async function updateDevice(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(update),
   });
+}
+
+export async function fetchDNSLogs(params?: {
+  client_ip?: string;
+  category?: string;
+  is_blocked?: boolean;
+}): Promise<DNSQueryLog[]> {
+  try {
+    const url = new URL(`${API_BASE_URL}/api/v1/filtering/logs`);
+    if (params?.client_ip) url.searchParams.append("client_ip", params.client_ip);
+    if (params?.category && params.category !== "all") url.searchParams.append("category", params.category);
+    if (params?.is_blocked !== undefined) url.searchParams.append("is_blocked", String(params.is_blocked));
+
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error("Failed to fetch logs");
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchFilterPolicy(): Promise<FilterPolicy | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/filtering/policies`);
+    if (!res.ok) throw new Error("Failed to fetch policies");
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function updateFilterPolicy(update: Partial<FilterPolicy>): Promise<FilterPolicy | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/filtering/policies`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(update),
+    });
+    if (!res.ok) throw new Error("Failed to update policy");
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+export async function fetchDNSStats(): Promise<DNSStats> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/filtering/stats`);
+    if (!res.ok) throw new Error("Failed to fetch stats");
+    return await res.json();
+  } catch {
+    return {
+      total_queries: 0,
+      blocked_queries: 0,
+      social_queries: 0,
+      allowed_queries: 0,
+      top_social_apps: [],
+      top_devices: [],
+    };
+  }
 }

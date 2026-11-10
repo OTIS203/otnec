@@ -95,12 +95,16 @@ var ouiDatabase = map[string]string{
 	"bc:dd:c2": "Espressif Inc.",
 	"cc:50:e3": "Espressif Inc.",
 
-	// Networking & Infrastructure (Cisco, TP-Link, Netgear, Ubiquiti, MikroTik)
+	// Networking & Infrastructure (Cisco, TP-Link, Netgear, Ubiquiti, MikroTik, Technicolor, Sagemcom)
 	"00:00:0c": "Cisco Systems",
 	"00:01:42": "Cisco Systems",
 	"00:14:f6": "Cisco Systems",
 	"00:1e:13": "Cisco Systems",
 	"50:06:04": "Cisco Systems",
+	"74:24:9f": "Technicolor / Gateway",
+	"00:50:56": "VMware Virtual Adapter",
+	"00:0c:29": "VMware Virtual Adapter",
+	"00:05:69": "VMware Virtual Adapter",
 	"00:0a:eb": "TP-Link Technologies",
 	"14:cc:20": "TP-Link Technologies",
 	"50:c7:bf": "TP-Link Technologies",
