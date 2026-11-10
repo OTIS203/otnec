@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.security import create_access_token
-from app.models.entities import Agent, Network
+from app.models.entities import Agent, Network, Tenant
 from app.schemas.schemas import IngestReport
 from app.services.inventory import process_scan_report
 
@@ -70,7 +70,24 @@ def ingest_telemetry(report: IngestReport, db: Session = Depends(get_db)):
         stmt = select(Network)
         network = db.execute(stmt).scalars().first()
         if not network:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Target network not registered")
+            # Auto-provision local network and tenant
+            stmt_tenant = select(Tenant)
+            tenant = db.execute(stmt_tenant).scalars().first()
+            if not tenant:
+                tenant = Tenant(name="Local Network", slug="local-network")
+                db.add(tenant)
+                db.flush()
+
+            network = Network(
+                tenant_id=tenant.id,
+                name="Local Wi-Fi Subnet",
+                cidr_v4=report.subnet,
+                gateway_ip="192.168.1.1",
+                security_score=100,
+            )
+            db.add(network)
+            db.commit()
+            db.refresh(network)
 
     new_devs, updated_devs = process_scan_report(db, network, report)
     db.commit()
