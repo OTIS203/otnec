@@ -97,3 +97,4 @@ To run continuous discovery in background daemon mode:
 ```
 
 All discovered devices, open ports, risk scores, and social media DNS logs will stream straight to your cloud database and appear instantly on your Vercel dashboard!
+
