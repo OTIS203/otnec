@@ -186,3 +186,4 @@ func (fe *FilterEngine) Classify(domain string) MatchResult {
 		IsBlocked:   false,
 	}
 }
+

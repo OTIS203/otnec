@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/netscope/netscope/agent/internal/discovery"
+	"github.com/netscope/netscope/agent/internal/dnsfilter"
 	"github.com/netscope/netscope/agent/internal/health"
 	"github.com/netscope/netscope/agent/internal/portscan"
 	"github.com/netscope/netscope/agent/internal/transport"
@@ -29,6 +30,10 @@ func main() {
 		pollIntervalSec = flag.Int("interval", 60, "Interval in seconds between scan cycles in daemon mode")
 		noPortScan      = flag.Bool("no-portscan", false, "Skip TCP port scanning (fast L2/L3 discovery only)")
 		healthOnly      = flag.Bool("health-only", false, "Run latency, jitter and DNS health checks only and exit")
+		dnsGuard        = flag.Bool("dns-guard", false, "Run local DNS filtering proxy & social media sinkhole")
+		dnsListen       = flag.String("dns-listen", ":53", "DNS listener address (e.g. :53 or :5353)")
+		dnsUpstream     = flag.String("dns-upstream", "1.1.1.1:53", "Upstream DNS resolver for allowed queries")
+		blockSocial     = flag.Bool("block-social", true, "Sinkhole social media domain lookups (TikTok, Meta, X, etc.)")
 		versionFlag     = flag.Bool("version", false, "Print NetScope agent version and exit")
 	)
 	flag.Parse()
@@ -56,6 +61,31 @@ func main() {
 		metrics := health.CheckNetworkHealth(ctx, "")
 		data, _ := json.MarshalIndent(metrics, "", "  ")
 		fmt.Println(string(data))
+		return
+	}
+
+	// 2. DNS Guard / Content Filter Mode
+	if *dnsGuard {
+		fmt.Println("=======================================================")
+		fmt.Printf(" NetScope Guard: DNS Filter & Social Media Sinkhole\n")
+		fmt.Printf(" Listening on: %s | Upstream: %s | Social Media Block: %v\n", *dnsListen, *dnsUpstream, *blockSocial)
+		fmt.Println("=======================================================")
+
+		engine := dnsfilter.NewFilterEngine(*blockSocial)
+		dnsSrv := dnsfilter.NewDNSServer(*dnsListen, *dnsUpstream, engine)
+
+		dnsSrv.SetLogCallback(func(log dnsfilter.QueryLog) {
+			statusTag := "[ALLOWED]"
+			if log.IsBlocked {
+				statusTag = "[BLOCKED - SINKHOLE 0.0.0.0]"
+			}
+			fmt.Printf("[%s] %-15s -> %-30s (%s) %s\n",
+				log.Timestamp.Format("15:04:05"), log.ClientIP, log.Domain, log.ServiceName, statusTag)
+		})
+
+		if err := dnsSrv.Start(ctx); err != nil {
+			fmt.Fprintf(os.Stderr, "DNS Guard error: %v\n", err)
+		}
 		return
 	}
 

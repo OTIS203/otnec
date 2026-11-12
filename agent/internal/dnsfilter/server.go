@@ -240,3 +240,4 @@ func (s *DNSServer) GetStats() StatsSnapshot {
 		TopClients:     clientsCopy,
 	}
 }
+

@@ -164,3 +164,4 @@ func BuildSinkholeResponse(query *ParsedQuery) []byte {
 
 	return resp
 }
+

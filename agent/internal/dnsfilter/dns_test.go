@@ -108,3 +108,4 @@ func TestParseDNSQueryAndSinkhole(t *testing.T) {
 		t.Errorf("expected 0.0.0.0 in sinkhole answer, got %v", rdata)
 	}
 }
+

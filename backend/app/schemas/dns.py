@@ -57,3 +57,4 @@ class DNSStatsResponse(BaseModel):
     allowed_queries: int
     top_social_apps: List[Dict[str, int | str]]
     top_devices: List[Dict[str, int | str]]
+
