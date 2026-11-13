@@ -1,6 +1,11 @@
 import { Alert, Device, Network, NetworkMetric, DNSQueryLog, FilterPolicy, DNSStats } from "@/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE_URL = (
+  rawUrl.startsWith("http://") || rawUrl.startsWith("https://")
+    ? rawUrl
+    : `https://${rawUrl}`
+).replace(/\/+$/, "");
 
 // Deterministic ISO Timestamps for Zero-Mismatch SSR Hydration
 const BASE_TIMESTAMP = "2026-11-10T12:00:00.000Z";
@@ -215,12 +220,13 @@ export async function fetchDNSLogs(params?: {
   is_blocked?: boolean;
 }): Promise<DNSQueryLog[]> {
   try {
-    const url = new URL(`${API_BASE_URL}/api/v1/filtering/logs`);
-    if (params?.client_ip) url.searchParams.append("client_ip", params.client_ip);
-    if (params?.category && params.category !== "all") url.searchParams.append("category", params.category);
-    if (params?.is_blocked !== undefined) url.searchParams.append("is_blocked", String(params.is_blocked));
+    const queryParts: string[] = [];
+    if (params?.client_ip) queryParts.push(`client_ip=${encodeURIComponent(params.client_ip)}`);
+    if (params?.category && params.category !== "all") queryParts.push(`category=${encodeURIComponent(params.category)}`);
+    if (params?.is_blocked !== undefined) queryParts.push(`is_blocked=${params.is_blocked}`);
+    const qs = queryParts.length > 0 ? `?${queryParts.join("&")}` : "";
 
-    const res = await fetch(url.toString());
+    const res = await fetch(`${API_BASE_URL}/api/v1/filtering/logs${qs}`);
     if (!res.ok) throw new Error("Failed to fetch logs");
     return await res.json();
   } catch {
