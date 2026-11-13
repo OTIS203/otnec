@@ -1,22 +1,17 @@
 """
 NetScope Hugging Face Spaces entrypoint.
-Runs FastAPI directly on port 7860 (required by Hugging Face Spaces).
-os.chdir moves into /backend so that `from app.main import app` resolves
-the backend/app package correctly without shadowing this root-level app.py.
+Named main.py (not app.py) to avoid shadowing the backend/app package.
 """
 import os
 import sys
 
-# Move working directory into the backend folder.
-# This means `from app.main import app` will resolve to backend/app/main.py
 root_dir = os.path.dirname(os.path.abspath(__file__))
 backend_dir = os.path.join(root_dir, "backend")
-os.chdir(backend_dir)
 sys.path.insert(0, backend_dir)
 
-from app.main import app  # noqa: E402  resolved from backend/app/main.py
-from fastapi.responses import HTMLResponse  # noqa: E402
-import uvicorn  # noqa: E402
+from app.main import app  # resolves to backend/app/main.py
+from fastapi.responses import HTMLResponse
+import uvicorn
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
