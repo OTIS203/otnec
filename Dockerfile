@@ -26,8 +26,8 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy application source code
 COPY --chown=user:user backend/app ./app
 
-EXPOSE 7860
+EXPOSE 10000 7860 8000
 
-# Launch FastAPI on port 7860
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "7860"]
+# Launch FastAPI dynamically on $PORT (defaults to 10000 for Render, 7860 for HF)
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}"]
 
