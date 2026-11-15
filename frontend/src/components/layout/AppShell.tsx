@@ -8,7 +8,10 @@ import { Header } from "./Header";
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isPublicRoute =
-    pathname === "/landing" || pathname === "/login" || pathname === "/register";
+    pathname === "/landing" ||
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname?.startsWith("/otnet-admin");
 
   if (isPublicRoute) {
     return <main className="w-full min-h-screen bg-slate-950">{children}</main>;
