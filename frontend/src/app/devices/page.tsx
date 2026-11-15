@@ -29,7 +29,7 @@ export default function DevicesPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-white">Discovered Devices</h2>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time physical hardware inventory discovered by your NetScope agent.
+            Real-time physical hardware inventory discovered by your OTNET agent.
           </p>
         </div>
         <button
@@ -50,7 +50,7 @@ export default function DevicesPage() {
           <div>
             <h3 className="text-base font-semibold text-white">No Live Devices Discovered Yet</h3>
             <p className="text-xs text-slate-400 max-w-md mx-auto mt-1 leading-relaxed">
-              Waiting for live telemetry. Run the NetScope agent on your local machine to discover all connected PCs and phones.
+              Waiting for live telemetry. Run the OTNET agent on your local machine to discover all connected PCs and phones.
             </p>
           </div>
           <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 max-w-lg mx-auto font-mono text-xs text-indigo-300 text-left">

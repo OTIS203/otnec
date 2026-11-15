@@ -59,6 +59,7 @@ class Network(Base):
     cidr_v4: Mapped[str] = mapped_column(String(50), nullable=False)
     gateway_ip: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     security_score: Mapped[int] = mapped_column(Integer, default=100)
+    enrollment_token: Mapped[str] = mapped_column(String(64), default="otnet_live_948a2bc7190d")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
     tenant: Mapped["Tenant"] = relationship(back_populates="networks")
@@ -185,6 +186,12 @@ class FilterPolicy(Base):
     block_gaming: Mapped[bool] = mapped_column(Boolean, default=False)
     custom_blacklist: Mapped[str] = mapped_column(Text, default="[]")
     custom_whitelist: Mapped[str] = mapped_column(Text, default="[]")
+    schedule_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    schedule_work_start: Mapped[str] = mapped_column(String(10), default="08:00")
+    schedule_work_end: Mapped[str] = mapped_column(String(10), default="17:00")
+    schedule_lunch_start: Mapped[str] = mapped_column(String(10), default="12:00")
+    schedule_lunch_end: Mapped[str] = mapped_column(String(10), default="13:00")
+    schedule_weekdays_only: Mapped[bool] = mapped_column(Boolean, default=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
 
 

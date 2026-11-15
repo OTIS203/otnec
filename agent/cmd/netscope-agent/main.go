@@ -35,7 +35,7 @@ func main() {
 		noPortScan      = flag.Bool("no-portscan", false, "Skip TCP port scanning (fast L2/L3 discovery only)")
 		healthOnly      = flag.Bool("health-only", false, "Run latency, jitter and DNS health checks only and exit")
 		dnsGuard        = flag.Bool("dns-guard", false, "Run local DNS filtering proxy & social media sinkhole")
-		enableDHCP      = flag.Bool("dhcp", true, "Run NetScope DHCP server to force all connected devices through NetScope DNS")
+		enableDHCP      = flag.Bool("dhcp", false, "Run NetScope DHCP server (optional, when router DHCP is disabled)")
 		dnsListen       = flag.String("dns-listen", ":53", "DNS listener address (e.g. :53 or :5353)")
 		dnsUpstream     = flag.String("dns-upstream", "1.1.1.1:53", "Upstream DNS resolver for allowed queries")
 		blockSocial     = flag.Bool("block-social", true, "Sinkhole social media domain lookups (TikTok, Meta, X, etc.)")
@@ -44,7 +44,7 @@ func main() {
 	flag.Parse()
 
 	if *versionFlag {
-		fmt.Printf("NetScope Agent v%s (Production Grade Network Discovery & Monitoring)\n", AppVersion)
+		fmt.Printf("OTNET Agent v%s (Enterprise Network Security & Guard Platform)\n", AppVersion)
 		return
 	}
 
@@ -72,7 +72,7 @@ func main() {
 	// 2. DNS Guard / Content Filter Mode
 	if *dnsGuard {
 		fmt.Println("=======================================================")
-		fmt.Printf(" NetScope Guard: DNS Filter & Social Media Sinkhole\n")
+		fmt.Printf(" OTNET Guard: DNS Filter & Content Security\n")
 		fmt.Printf(" Listening on: %s | Upstream: %s | Backend: %s\n", *dnsListen, *dnsUpstream, *serverFlag)
 		fmt.Println("=======================================================")
 

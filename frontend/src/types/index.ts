@@ -45,6 +45,7 @@ export interface Network {
   gateway_ip?: string;
   security_score: number;
   created_at: string;
+  enrollment_token?: string;
 }
 
 export interface Alert {
@@ -90,6 +91,14 @@ export interface FilterPolicy {
   block_gaming: boolean;
   custom_blacklist: string[];
   custom_whitelist: string[];
+  schedule_enabled?: boolean;
+  schedule_work_start?: string;
+  schedule_work_end?: string;
+  schedule_lunch_start?: string;
+  schedule_lunch_end?: string;
+  schedule_weekdays_only?: boolean;
+  is_schedule_active?: boolean;
+  schedule_status_text?: string;
   updated_at: string;
 }
 

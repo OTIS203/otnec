@@ -48,6 +48,7 @@ class NetworkOut(BaseModel):
     cidr_v4: str
     gateway_ip: Optional[str] = None
     security_score: int
+    enrollment_token: Optional[str] = None
     created_at: datetime
 
 

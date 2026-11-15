@@ -6,6 +6,7 @@ import (
 	"net"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 )
 
@@ -38,11 +39,11 @@ type DNSServer struct {
 
 	conn net.PacketConn
 
-	mu          sync.RWMutex
-	logs        []QueryLog
-	maxLogs     int
-	topDomains  map[string]uint64
-	topClients  map[string]uint64
+	mu         sync.RWMutex
+	logs       []QueryLog
+	maxLogs    int
+	topDomains map[string]uint64
+	topClients map[string]uint64
 
 	totalQueries   uint64
 	blockedQueries uint64
@@ -76,9 +77,26 @@ func (s *DNSServer) SetLogCallback(cb func(QueryLog)) {
 
 // Start begins listening for DNS UDP queries.
 func (s *DNSServer) Start(ctx context.Context) error {
-	conn, err := net.ListenPacket("udp", s.listenAddr)
+	lc := net.ListenConfig{
+		Control: func(network, address string, c syscall.RawConn) error {
+			var opErr error
+			err := c.Control(func(fd uintptr) {
+				opErr = syscall.SetsockoptInt(syscall.Handle(fd), syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1)
+			})
+			if err != nil {
+				return err
+			}
+			return opErr
+		},
+	}
+
+	conn, err := lc.ListenPacket(ctx, "udp4", s.listenAddr)
 	if err != nil {
-		return fmt.Errorf("failed to bind dns listener on %s: %w", s.listenAddr, err)
+		// Fallback to standard ListenPacket
+		conn, err = net.ListenPacket("udp", s.listenAddr)
+		if err != nil {
+			return fmt.Errorf("failed to bind dns listener on %s: %w", s.listenAddr, err)
+		}
 	}
 	s.conn = conn
 
@@ -240,4 +258,3 @@ func (s *DNSServer) GetStats() StatsSnapshot {
 		TopClients:     clientsCopy,
 	}
 }
-

@@ -22,6 +22,10 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  Clock,
+  Calendar,
+  Coffee,
+  Briefcase,
 } from "lucide-react";
 import { DNSQueryLog, FilterPolicy, DNSStats, DNSStatus } from "@/types";
 import {
@@ -44,6 +48,15 @@ export default function FilteringPage() {
   const [activeSetupTab, setActiveSetupTab] = useState<"router" | "ios" | "android" | "windows">("router");
   const [showSetupGuide, setShowSetupGuide] = useState<boolean>(true);
 
+  // Schedule Policy States
+  const [scheduleEnabled, setScheduleEnabled] = useState<boolean>(false);
+  const [workStart, setWorkStart] = useState<string>("08:00");
+  const [workEnd, setWorkEnd] = useState<string>("17:00");
+  const [lunchStart, setLunchStart] = useState<string>("12:00");
+  const [lunchEnd, setLunchEnd] = useState<string>("13:00");
+  const [weekdaysOnly, setWeekdaysOnly] = useState<boolean>(true);
+  const [savingSchedule, setSavingSchedule] = useState<boolean>(false);
+
   // Filters
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -63,6 +76,14 @@ export default function FilteringPage() {
     setLogs(logsData);
     setStats(statsData);
     setPolicy(policyData);
+    if (policyData && !savingSchedule) {
+      setScheduleEnabled(policyData.schedule_enabled ?? false);
+      setWorkStart(policyData.schedule_work_start ?? "08:00");
+      setWorkEnd(policyData.schedule_work_end ?? "17:00");
+      setLunchStart(policyData.schedule_lunch_start ?? "12:00");
+      setLunchEnd(policyData.schedule_lunch_end ?? "13:00");
+      setWeekdaysOnly(policyData.schedule_weekdays_only ?? true);
+    }
     setDnsStatus(statusData);
     setLoading(false);
   };
@@ -105,6 +126,23 @@ export default function FilteringPage() {
       await loadData();
     }
     setSaving(false);
+  };
+
+  const handleSaveSchedule = async () => {
+    setSavingSchedule(true);
+    const updated = await updateFilterPolicy({
+      schedule_enabled: scheduleEnabled,
+      schedule_work_start: workStart,
+      schedule_work_end: workEnd,
+      schedule_lunch_start: lunchStart,
+      schedule_lunch_end: lunchEnd,
+      schedule_weekdays_only: weekdaysOnly,
+    });
+    if (updated) {
+      setPolicy(updated);
+      await loadData();
+    }
+    setSavingSchedule(false);
   };
 
   const handleAddCustomBlock = async () => {
@@ -197,7 +235,7 @@ export default function FilteringPage() {
               </span>
             </div>
             <p className="text-xs text-slate-300">
-              Point your Wi-Fi router or office devices to this server IP so NetScope intercepts queries, blocks distractions, and attributes traffic to device names.
+              Point your Wi-Fi router or office devices to this server IP so OTNET intercepts queries, blocks distractions, and attributes traffic to device names.
             </p>
           </div>
 
@@ -462,6 +500,146 @@ export default function FilteringPage() {
         </div>
       </div>
 
+      {/* Scheduled Access Policies (Office Hours Automation) */}
+      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-3">
+          <div className="flex items-center space-x-3">
+            <div className="w-9 h-9 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+                  Scheduled Access Automation
+                </h2>
+                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                  Feature #1
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Automatically block social media during work hours, and unblock during lunch breaks & off-hours.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            {policy?.schedule_status_text && (
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center space-x-1.5 ${
+                  policy.is_schedule_active
+                    ? "bg-rose-500/15 text-rose-300 border-rose-500/30"
+                    : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
+                }`}
+              >
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    policy.is_schedule_active ? "bg-rose-400 animate-ping" : "bg-emerald-400"
+                  }`}
+                />
+                <span>{policy.schedule_status_text}</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Schedule Controls */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
+          {/* Master Toggle */}
+          <div className="p-3.5 rounded-lg bg-slate-950/60 border border-slate-800 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-semibold text-white block">Automated Schedule</span>
+              <span className="text-[11px] text-slate-400">
+                {scheduleEnabled ? "Active & Enforced" : "Disabled (Manual)"}
+              </span>
+            </div>
+            <button
+              onClick={() => setScheduleEnabled(!scheduleEnabled)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                scheduleEnabled ? "bg-indigo-600" : "bg-slate-700"
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  scheduleEnabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Work Hours Range */}
+          <div className="p-3.5 rounded-lg bg-slate-950/60 border border-slate-800 space-y-1.5">
+            <div className="flex items-center space-x-1.5 text-xs font-medium text-slate-300">
+              <Briefcase className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Work Hours (Blocked)</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="time"
+                value={workStart}
+                onChange={(e) => setWorkStart(e.target.value)}
+                disabled={!scheduleEnabled}
+                className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white disabled:opacity-50 font-mono w-24 focus:outline-none focus:border-indigo-500"
+              />
+              <span className="text-slate-500 text-xs">to</span>
+              <input
+                type="time"
+                value={workEnd}
+                onChange={(e) => setWorkEnd(e.target.value)}
+                disabled={!scheduleEnabled}
+                className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white disabled:opacity-50 font-mono w-24 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+
+          {/* Lunch Break Range */}
+          <div className="p-3.5 rounded-lg bg-slate-950/60 border border-slate-800 space-y-1.5">
+            <div className="flex items-center space-x-1.5 text-xs font-medium text-slate-300">
+              <Coffee className="w-3.5 h-3.5 text-amber-400" />
+              <span>Lunch Break (Allowed)</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="time"
+                value={lunchStart}
+                onChange={(e) => setLunchStart(e.target.value)}
+                disabled={!scheduleEnabled}
+                className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white disabled:opacity-50 font-mono w-24 focus:outline-none focus:border-indigo-500"
+              />
+              <span className="text-slate-500 text-xs">to</span>
+              <input
+                type="time"
+                value={lunchEnd}
+                onChange={(e) => setLunchEnd(e.target.value)}
+                disabled={!scheduleEnabled}
+                className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white disabled:opacity-50 font-mono w-24 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+
+          {/* Actions & Weekdays Checkbox */}
+          <div className="p-3.5 rounded-lg bg-slate-950/60 border border-slate-800 flex flex-col justify-between space-y-2">
+            <label className="flex items-center space-x-2 cursor-pointer text-xs text-slate-300 select-none">
+              <input
+                type="checkbox"
+                checked={weekdaysOnly}
+                onChange={(e) => setWeekdaysOnly(e.target.checked)}
+                disabled={!scheduleEnabled}
+                className="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0 disabled:opacity-50"
+              />
+              <span>Monday – Friday only</span>
+            </label>
+            <button
+              onClick={handleSaveSchedule}
+              disabled={savingSchedule}
+              className="w-full px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-semibold transition disabled:opacity-50 flex items-center justify-center space-x-1.5"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${savingSchedule ? "animate-spin" : ""}`} />
+              <span>{savingSchedule ? "Saving..." : "Save Schedule"}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Control Panel: Category Policies & Custom Blacklist */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Policy Toggles */}
@@ -518,7 +696,7 @@ export default function FilteringPage() {
           </div>
 
           <div className="text-[11px] text-slate-500 pt-2 border-t border-slate-800">
-            💡 When enabled, the local NetScope DNS sinkholes queries instantly. All connected phones and PCs receive connection errors for these domains.
+            💡 When enabled, the local OTNET DNS sinkholes queries instantly. All connected phones and PCs receive connection errors for these domains.
           </div>
         </div>
 

@@ -33,8 +33,8 @@ export function Sidebar() {
           <Activity className="w-5 h-5" />
         </div>
         <div>
-          <span className="font-bold text-lg text-white tracking-tight">NetScope</span>
-          <span className="block text-xs text-indigo-400 font-mono">v1.0.0 PRO</span>
+          <span className="font-bold text-lg text-white tracking-tight">OTNET</span>
+          <span className="block text-xs text-indigo-400 font-mono">v2.0 SaaS</span>
         </div>
       </div>
 

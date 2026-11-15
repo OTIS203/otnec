@@ -5,8 +5,8 @@ import { Header } from "@/components/layout/Header";
 import { Sidebar } from "@/components/layout/Sidebar";
 
 export const metadata: Metadata = {
-  title: "NetScope — Network Discovery & Security Platform",
-  description: "Production-grade network scanning, continuous monitoring, and automated security posture.",
+  title: "OTNET — Network Intelligence & Security Guard Platform",
+  description: "Enterprise network monitoring, DNS traffic filtering, and scheduled access policies.",
   manifest: "/manifest.json",
 };
 

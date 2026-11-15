@@ -18,6 +18,39 @@ from app.schemas.dns import (
 router = APIRouter(prefix="/filtering", tags=["content-filtering"])
 
 
+def evaluate_schedule(policy: FilterPolicy) -> tuple[bool, str, bool]:
+    """
+    Evaluates work hours and lunch schedules.
+    Returns (effective_block_social, status_text, is_schedule_active).
+    """
+    if not policy.schedule_enabled:
+        status_text = "Manual Policy (24/7 Enabled)" if policy.block_social_media else "Manual Policy (Allowed)"
+        return policy.block_social_media, status_text, False
+
+    now = datetime.now()
+    weekday = now.weekday()  # 0=Monday, 6=Sunday
+    current_time_str = now.strftime("%H:%M")
+
+    # If weekdays only and today is Saturday (5) or Sunday (6)
+    if policy.schedule_weekdays_only and weekday in (5, 6):
+        return False, "Weekend Mode — Social Media Allowed", False
+
+    work_start = policy.schedule_work_start or "08:00"
+    work_end = policy.schedule_work_end or "17:00"
+    lunch_start = policy.schedule_lunch_start or "12:00"
+    lunch_end = policy.schedule_lunch_end or "13:00"
+
+    # Check lunch break
+    if lunch_start <= current_time_str < lunch_end:
+        return False, f"Lunch Break ({lunch_start}–{lunch_end}) — Social Media Allowed", False
+
+    # Check work hours
+    if work_start <= current_time_str < work_end:
+        return True, f"Work Hours Active ({work_start}–{work_end}) — Social Media Blocked", True
+
+    return False, f"Off-Hours (After {work_end}) — Social Media Allowed", False
+
+
 def _get_or_create_default_policy(db: Session, network_id: str) -> FilterPolicy:
     policy = db.query(FilterPolicy).filter(FilterPolicy.network_id == network_id).first()
     if not policy:
@@ -28,6 +61,12 @@ def _get_or_create_default_policy(db: Session, network_id: str) -> FilterPolicy:
             block_gaming=False,
             custom_blacklist="[]",
             custom_whitelist="[]",
+            schedule_enabled=False,
+            schedule_work_start="08:00",
+            schedule_work_end="17:00",
+            schedule_lunch_start="12:00",
+            schedule_lunch_end="13:00",
+            schedule_weekdays_only=True,
         )
         db.add(policy)
         db.commit()
@@ -42,15 +81,24 @@ def get_filter_policy(db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No network found")
 
     policy = _get_or_create_default_policy(db, network.id)
+    eff_social, status_text, is_sched = evaluate_schedule(policy)
 
     return FilterPolicyResponse(
         id=policy.id,
         network_id=policy.network_id,
-        block_social_media=policy.block_social_media,
+        block_social_media=eff_social,
         block_streaming=policy.block_streaming,
         block_gaming=policy.block_gaming,
         custom_blacklist=json.loads(policy.custom_blacklist or "[]"),
         custom_whitelist=json.loads(policy.custom_whitelist or "[]"),
+        schedule_enabled=policy.schedule_enabled or False,
+        schedule_work_start=policy.schedule_work_start or "08:00",
+        schedule_work_end=policy.schedule_work_end or "17:00",
+        schedule_lunch_start=policy.schedule_lunch_start or "12:00",
+        schedule_lunch_end=policy.schedule_lunch_end or "13:00",
+        schedule_weekdays_only=policy.schedule_weekdays_only if policy.schedule_weekdays_only is not None else True,
+        is_schedule_active=is_sched,
+        schedule_status_text=status_text,
         updated_at=policy.updated_at,
     )
 
@@ -73,19 +121,41 @@ def update_filter_policy(update: FilterPolicyUpdate, db: Session = Depends(get_d
         policy.custom_blacklist = json.dumps(update.custom_blacklist)
     if update.custom_whitelist is not None:
         policy.custom_whitelist = json.dumps(update.custom_whitelist)
+    if update.schedule_enabled is not None:
+        policy.schedule_enabled = update.schedule_enabled
+    if update.schedule_work_start is not None:
+        policy.schedule_work_start = update.schedule_work_start
+    if update.schedule_work_end is not None:
+        policy.schedule_work_end = update.schedule_work_end
+    if update.schedule_lunch_start is not None:
+        policy.schedule_lunch_start = update.schedule_lunch_start
+    if update.schedule_lunch_end is not None:
+        policy.schedule_lunch_end = update.schedule_lunch_end
+    if update.schedule_weekdays_only is not None:
+        policy.schedule_weekdays_only = update.schedule_weekdays_only
 
     policy.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(policy)
 
+    eff_social, status_text, is_sched = evaluate_schedule(policy)
+
     return FilterPolicyResponse(
         id=policy.id,
         network_id=policy.network_id,
-        block_social_media=policy.block_social_media,
+        block_social_media=eff_social,
         block_streaming=policy.block_streaming,
         block_gaming=policy.block_gaming,
         custom_blacklist=json.loads(policy.custom_blacklist or "[]"),
         custom_whitelist=json.loads(policy.custom_whitelist or "[]"),
+        schedule_enabled=policy.schedule_enabled or False,
+        schedule_work_start=policy.schedule_work_start or "08:00",
+        schedule_work_end=policy.schedule_work_end or "17:00",
+        schedule_lunch_start=policy.schedule_lunch_start or "12:00",
+        schedule_lunch_end=policy.schedule_lunch_end or "13:00",
+        schedule_weekdays_only=policy.schedule_weekdays_only if policy.schedule_weekdays_only is not None else True,
+        is_schedule_active=is_sched,
+        schedule_status_text=status_text,
         updated_at=policy.updated_at,
     )
 

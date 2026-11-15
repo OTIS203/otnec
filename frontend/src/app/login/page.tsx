@@ -66,7 +66,7 @@ export default function LoginPage() {
           </div>
         </div>
         <h2 className="mt-4 text-center text-2xl font-bold tracking-tight text-white">
-          Sign in to NetScope
+          Sign in to OTNET
         </h2>
         <p className="mt-1 text-center text-xs text-slate-400">
           Network Discovery, Continuous Monitoring & Security Posture
