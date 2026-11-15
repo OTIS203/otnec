@@ -121,7 +121,7 @@ export default function AlertsPage() {
               )}
             </div>
           </div>
-        ))}
+        )))}
       </div>
     </div>
   );

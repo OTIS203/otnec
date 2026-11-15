@@ -11,10 +11,6 @@ import {
 } from "lucide-react";
 import { Alert, Device, Network, NetworkMetric } from "@/types";
 import {
-  MOCK_ALERTS,
-  MOCK_DEVICES,
-  MOCK_METRICS,
-  MOCK_NETWORK,
   fetchAlerts,
   fetchDevices,
   fetchMetrics,
