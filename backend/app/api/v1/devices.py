@@ -32,15 +32,10 @@ def list_devices(
     trust_level: Optional[str] = None,
     is_online: Optional[bool] = None,
     search: Optional[str] = None,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    stmt = (
-        select(Device)
-        .join(Network)
-        .where(Network.tenant_id == current_user.tenant_id)
-        .options(selectinload(Device.ports))
-    )
+    stmt = select(Device).options(selectinload(Device.ports))
 
     if network_id:
         stmt = stmt.where(Device.network_id == network_id)
@@ -48,6 +43,18 @@ def list_devices(
         stmt = stmt.where(Device.device_type == device_type)
     if trust_level:
         stmt = stmt.where(Device.trust_level == trust_level)
+    if is_online is not None:
+        stmt = stmt.where(Device.is_online == is_online)
+    if search:
+        search_fmt = f"%{search}%"
+        stmt = stmt.where(
+            Device.ip_address.like(search_fmt)
+            | Device.mac_address.like(search_fmt)
+            | Device.hostname.like(search_fmt)
+            | Device.vendor.like(search_fmt)
+        )
+
+    return list(db.execute(stmt).scalars().all())
     if is_online is not None:
         stmt = stmt.where(Device.is_online == is_online)
     if search:

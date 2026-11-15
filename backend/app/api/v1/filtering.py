@@ -1,5 +1,5 @@
 import json
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
@@ -35,42 +35,6 @@ def _get_or_create_default_policy(db: Session, network_id: str) -> FilterPolicy:
     return policy
 
 
-def _seed_sample_logs_if_empty(db: Session, network_id: str):
-    count = db.query(DNSQueryLog).filter(DNSQueryLog.network_id == network_id).count()
-    if count > 0:
-        return
-
-    # Seed illustrative queries so the dashboard immediately shows device activity
-    now = datetime.now(timezone.utc)
-    sample_queries = [
-        ("192.168.1.154", "iPhone-Staff-01", "api.tiktokv.com", "Social Media", "TikTok", True, now - timedelta(minutes=2)),
-        ("192.168.1.154", "iPhone-Staff-01", "v16.tiktokcdn.com", "Social Media", "TikTok", True, now - timedelta(minutes=2, seconds=10)),
-        ("192.168.1.102", "Galaxy-S23-Ops", "i.instagram.com", "Social Media", "Instagram", True, now - timedelta(minutes=5)),
-        ("192.168.1.102", "Galaxy-S23-Ops", "graph.facebook.com", "Social Media", "Facebook", True, now - timedelta(minutes=8)),
-        ("192.168.1.88", "Workstation-Finance", "api.x.com", "Social Media", "X (Twitter)", True, now - timedelta(minutes=14)),
-        ("192.168.1.88", "Workstation-Finance", "app.slack.com", "General", "Slack", False, now - timedelta(minutes=15)),
-        ("192.168.1.45", "MacBook-Engineering", "github.com", "General", "GitHub", False, now - timedelta(minutes=18)),
-        ("192.168.1.154", "iPhone-Staff-01", "snapchat.com", "Social Media", "Snapchat", True, now - timedelta(minutes=25)),
-        ("192.168.1.102", "Galaxy-S23-Ops", "google.com", "General", "Google Search", False, now - timedelta(minutes=30)),
-        ("192.168.1.45", "MacBook-Engineering", "googlevideo.com", "Streaming Video", "YouTube", False, now - timedelta(minutes=35)),
-    ]
-
-    for ip, host, domain, cat, srv, blocked, ts in sample_queries:
-        log = DNSQueryLog(
-            network_id=network_id,
-            client_ip=ip,
-            client_hostname=host,
-            domain=domain,
-            category=cat,
-            service_name=srv,
-            is_blocked=blocked,
-            query_type="A",
-            queried_at=ts,
-        )
-        db.add(log)
-    db.commit()
-
-
 @router.get("/policies", response_model=FilterPolicyResponse)
 def get_filter_policy(db: Session = Depends(get_db)):
     network = db.query(Network).first()
@@ -78,7 +42,6 @@ def get_filter_policy(db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="No network found")
 
     policy = _get_or_create_default_policy(db, network.id)
-    _seed_sample_logs_if_empty(db, network.id)
 
     return FilterPolicyResponse(
         id=policy.id,
@@ -139,8 +102,6 @@ def get_query_logs(
     if not network:
         return []
 
-    _seed_sample_logs_if_empty(db, network.id)
-
     query = db.query(DNSQueryLog).filter(DNSQueryLog.network_id == network.id)
 
     if client_ip:
@@ -197,8 +158,6 @@ def get_filtering_stats(db: Session = Depends(get_db)):
             top_social_apps=[],
             top_devices=[],
         )
-
-    _seed_sample_logs_if_empty(db, network.id)
 
     total = db.query(DNSQueryLog).filter(DNSQueryLog.network_id == network.id).count()
     blocked = db.query(DNSQueryLog).filter(

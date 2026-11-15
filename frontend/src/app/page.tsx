@@ -25,10 +25,10 @@ import { HealthChart } from "@/components/dashboard/HealthChart";
 import { ClientTime } from "@/components/common/ClientTime";
 
 export default function DashboardPage() {
-  const [network, setNetwork] = useState<Network>(MOCK_NETWORK);
-  const [devices, setDevices] = useState<Device[]>(MOCK_DEVICES);
-  const [alerts, setAlerts] = useState<Alert[]>(MOCK_ALERTS);
-  const [metrics, setMetrics] = useState<NetworkMetric[]>(MOCK_METRICS);
+  const [network, setNetwork] = useState<Network | null>(null);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [metrics, setMetrics] = useState<NetworkMetric[]>([]);
 
   useEffect(() => {
     async function loadData() {
@@ -38,10 +38,14 @@ export default function DashboardPage() {
       setDevices(devs);
       const alts = await fetchAlerts();
       setAlerts(alts);
-      const mets = await fetchMetrics(nets[0]?.id || "net-demo-01");
-      setMetrics(mets);
+      if (nets.length > 0) {
+        const mets = await fetchMetrics(nets[0].id);
+        setMetrics(mets);
+      }
     }
     loadData();
+    const interval = setInterval(loadData, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const onlineCount = devices.filter((d) => d.is_online).length;
@@ -57,7 +61,11 @@ export default function DashboardPage() {
         <div>
           <h2 className="text-2xl font-bold tracking-tight text-white">Subnet Overview</h2>
           <p className="text-xs text-slate-400 mt-1">
-            Real-time status for <span className="font-mono text-indigo-400">{network.cidr_v4}</span> ({network.name})
+            Real-time status for{" "}
+            <span className="font-mono text-indigo-400">
+              {network ? network.cidr_v4 : "Physical Network"}
+            </span>{" "}
+            ({network ? network.name : "Live Scanner"})
           </p>
         </div>
       </div>
@@ -92,7 +100,9 @@ export default function DashboardPage() {
             <Wifi className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="flex items-baseline space-x-2">
-            <span className="text-2xl font-bold text-white">1.2</span>
+            <span className="text-2xl font-bold text-white">
+              {metrics.length > 0 ? metrics[metrics.length - 1].latency_ms.toFixed(1) : "0.0"}
+            </span>
             <span className="text-xs text-slate-400">ms avg RTT</span>
           </div>
         </div>
@@ -103,8 +113,10 @@ export default function DashboardPage() {
             <Activity className="w-4 h-4 text-sky-400" />
           </div>
           <div className="flex items-baseline space-x-2">
-            <span className="text-2xl font-bold text-white">0.0%</span>
-            <span className="text-xs text-emerald-400">Optimal Link</span>
+            <span className="text-2xl font-bold text-white">
+              {metrics.length > 0 ? `${metrics[metrics.length - 1].packet_loss_pct}%` : "0.0%"}
+            </span>
+            <span className="text-xs text-emerald-400">Live Telemetry</span>
           </div>
         </div>
       </div>
@@ -112,7 +124,7 @@ export default function DashboardPage() {
       {/* Security Posture & Telemetry Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-1">
-          <SecurityScoreGauge score={network.security_score} />
+          <SecurityScoreGauge score={network ? network.security_score : 100} />
         </div>
         <div className="lg:col-span-2">
           <HealthChart metrics={metrics} />

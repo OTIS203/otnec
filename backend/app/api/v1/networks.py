@@ -13,10 +13,10 @@ router = APIRouter(prefix="/networks", tags=["Networks"])
 
 @router.get("", response_model=List[NetworkOut])
 def list_networks(
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    stmt = select(Network).where(Network.tenant_id == current_user.tenant_id)
+    stmt = select(Network)
     return list(db.execute(stmt).scalars().all())
 
 

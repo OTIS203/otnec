@@ -2,11 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import { Device } from "@/types";
-import { MOCK_DEVICES, fetchDevices } from "@/lib/api";
+import { fetchDevices } from "@/lib/api";
 import { NetworkTopology } from "@/components/topology/NetworkTopology";
 
 export default function TopologyPage() {
-  const [devices, setDevices] = useState<Device[]>(MOCK_DEVICES);
+  const [devices, setDevices] = useState<Device[]>([]);
 
   useEffect(() => {
     async function load() {

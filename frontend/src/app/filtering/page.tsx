@@ -282,31 +282,28 @@ export default function FilteringPage() {
           </div>
 
           <div className="space-y-3">
-            {(stats?.top_social_apps && stats.top_social_apps.length > 0
-              ? stats.top_social_apps
-              : [
-                  { name: "TikTok", count: 3 },
-                  { name: "Instagram", count: 2 },
-                  { name: "Facebook", count: 1 },
-                  { name: "X (Twitter)", count: 1 },
-                  { name: "Snapchat", count: 1 },
-                ]
-            ).map((app) => (
-              <div key={app.name} className="space-y-1">
-                <div className="flex justify-between text-xs font-medium">
-                  <span className="text-slate-200">{app.name}</span>
-                  <span className="text-slate-400 font-mono">{app.count} queries</span>
+            {stats?.top_social_apps && stats.top_social_apps.length > 0 ? (
+              stats.top_social_apps.map((app) => (
+                <div key={app.name} className="space-y-1">
+                  <div className="flex justify-between text-xs font-medium">
+                    <span className="text-slate-200">{app.name}</span>
+                    <span className="text-slate-400 font-mono">{app.count} queries</span>
+                  </div>
+                  <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                    <div
+                      className="bg-indigo-500 h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, Math.max(15, (Number(app.count) / Math.max(1, stats.social_queries)) * 100))}%`,
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                  <div
-                    className="bg-indigo-500 h-full rounded-full transition-all"
-                    style={{
-                      width: `${Math.min(100, Math.max(15, (Number(app.count) / 5) * 100))}%`,
-                    }}
-                  />
-                </div>
+              ))
+            ) : (
+              <div className="py-6 text-center text-slate-500 text-xs">
+                No social media queries detected yet.
               </div>
-            ))}
+            )}
           </div>
         </div>
 

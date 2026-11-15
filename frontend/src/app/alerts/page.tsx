@@ -4,10 +4,10 @@ import React, { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle, Filter, ShieldAlert } from "lucide-react";
 import { ClientTime } from "@/components/common/ClientTime";
 import { Alert } from "@/types";
-import { MOCK_ALERTS, fetchAlerts } from "@/lib/api";
+import { fetchAlerts } from "@/lib/api";
 
 export default function AlertsPage() {
-  const [alerts, setAlerts] = useState<Alert[]>(MOCK_ALERTS);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [filterSeverity, setFilterSeverity] = useState<string>("all");
 
   const loadAlerts = async () => {
@@ -55,7 +55,14 @@ export default function AlertsPage() {
       </div>
 
       <div className="space-y-3">
-        {filtered.map((alt) => (
+        {filtered.length === 0 ? (
+          <div className="bg-slate-900 border border-slate-800 rounded-xl p-12 text-center text-slate-400">
+            <CheckCircle className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+            <h3 className="text-sm font-semibold text-white">All Clear</h3>
+            <p className="text-xs text-slate-500 mt-1">No security alerts or unencrypted open services detected.</p>
+          </div>
+        ) : (
+          filtered.map((alt) => (
           <div
             key={alt.id}
             className={`p-4 rounded-xl border flex items-start justify-between space-x-4 transition ${

@@ -15,13 +15,12 @@ router = APIRouter(prefix="/metrics", tags=["Network Metrics & Health"])
 def get_network_metrics(
     network_id: str,
     limit: int = Query(default=50, le=200),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     stmt = (
         select(NetworkMetric)
-        .join(Network)
-        .where(NetworkMetric.network_id == network_id, Network.tenant_id == current_user.tenant_id)
+        .where(NetworkMetric.network_id == network_id)
         .order_by(NetworkMetric.recorded_at.desc())
         .limit(limit)
     )

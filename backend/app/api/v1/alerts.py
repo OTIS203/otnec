@@ -16,15 +16,10 @@ def list_alerts(
     network_id: Optional[str] = None,
     severity: Optional[str] = None,
     unacknowledged_only: bool = False,
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    stmt = (
-        select(Alert)
-        .join(Network)
-        .where(Network.tenant_id == current_user.tenant_id)
-        .order_by(Alert.created_at.desc())
-    )
+    stmt = select(Alert).order_by(Alert.created_at.desc())
 
     if network_id:
         stmt = stmt.where(Alert.network_id == network_id)

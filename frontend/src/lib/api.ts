@@ -157,9 +157,9 @@ export async function fetchNetworks(): Promise<Network[]> {
     const res = await fetch(`${API_BASE_URL}/api/v1/networks`);
     if (!res.ok) throw new Error("Failed to fetch");
     const data = await res.json();
-    return data.length > 0 ? data : [MOCK_NETWORK];
+    return Array.isArray(data) ? data : [];
   } catch {
-    return [MOCK_NETWORK];
+    return [];
   }
 }
 
@@ -171,9 +171,9 @@ export async function fetchDevices(networkId?: string): Promise<Device[]> {
     const res = await fetch(url);
     if (!res.ok) throw new Error("Failed to fetch");
     const data = await res.json();
-    return data.length > 0 ? data : MOCK_DEVICES;
+    return Array.isArray(data) ? data : [];
   } catch {
-    return MOCK_DEVICES;
+    return [];
   }
 }
 
@@ -182,9 +182,9 @@ export async function fetchAlerts(): Promise<Alert[]> {
     const res = await fetch(`${API_BASE_URL}/api/v1/alerts`);
     if (!res.ok) throw new Error("Failed to fetch");
     const data = await res.json();
-    return data.length > 0 ? data : MOCK_ALERTS;
+    return Array.isArray(data) ? data : [];
   } catch {
-    return MOCK_ALERTS;
+    return [];
   }
 }
 
@@ -193,9 +193,9 @@ export async function fetchMetrics(networkId: string): Promise<NetworkMetric[]> 
     const res = await fetch(`${API_BASE_URL}/api/v1/metrics/${networkId}`);
     if (!res.ok) throw new Error("Failed to fetch");
     const data = await res.json();
-    return data.length > 0 ? data : MOCK_METRICS;
+    return Array.isArray(data) ? data : [];
   } catch {
-    return MOCK_METRICS;
+    return [];
   }
 }
 
