@@ -6,12 +6,14 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	"github.com/netscope/netscope/agent/internal/dhcpserver"
 	"github.com/netscope/netscope/agent/internal/discovery"
 	"github.com/netscope/netscope/agent/internal/dnsfilter"
 	"github.com/netscope/netscope/agent/internal/health"
@@ -33,6 +35,7 @@ func main() {
 		noPortScan      = flag.Bool("no-portscan", false, "Skip TCP port scanning (fast L2/L3 discovery only)")
 		healthOnly      = flag.Bool("health-only", false, "Run latency, jitter and DNS health checks only and exit")
 		dnsGuard        = flag.Bool("dns-guard", false, "Run local DNS filtering proxy & social media sinkhole")
+		enableDHCP      = flag.Bool("dhcp", true, "Run NetScope DHCP server to force all connected devices through NetScope DNS")
 		dnsListen       = flag.String("dns-listen", ":53", "DNS listener address (e.g. :53 or :5353)")
 		dnsUpstream     = flag.String("dns-upstream", "1.1.1.1:53", "Upstream DNS resolver for allowed queries")
 		blockSocial     = flag.Bool("block-social", true, "Sinkhole social media domain lookups (TikTok, Meta, X, etc.)")
@@ -79,6 +82,27 @@ func main() {
 		serverURL := *serverFlag
 		if serverURL == "" {
 			serverURL = "http://localhost:8000"
+		}
+
+		// Start NetScope DHCP Server if enabled (forces all LAN devices to use NetScope DNS without touching phones)
+		if *enableDHCP {
+			dhcpCfg := dhcpserver.Config{
+				ServerIP:   net.ParseIP("192.168.0.102"),
+				GatewayIP:  net.ParseIP("192.168.0.1"),
+				DNSIP:      net.ParseIP("192.168.0.102"),
+				SubnetMask: net.CIDRMask(24, 32),
+				StartIP:    net.ParseIP("192.168.0.105"),
+				EndIP:      net.ParseIP("192.168.0.200"),
+				LeaseTime:  2 * time.Hour,
+			}
+			dhcpSrv := dhcpserver.New(dhcpCfg, func(lease dhcpserver.Lease) {
+				fmt.Printf("[DHCP LEASE] Device connected: %s (%s) -> IP %s\n", lease.MAC, lease.Hostname, lease.IP)
+			})
+			go func() {
+				if err := dhcpSrv.Start(ctx); err != nil {
+					fmt.Printf("[DHCP Warning] DHCP server could not bind (port 67 in use or permission denied): %v\n", err)
+				}
+			}()
 		}
 
 		// Dynamically sync filter policies from backend every 5 seconds
