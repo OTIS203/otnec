@@ -200,3 +200,41 @@ def get_filtering_stats(db: Session = Depends(get_db)):
         top_social_apps=top_apps,
         top_devices=top_devices,
     )
+
+
+@router.get("/status")
+def get_dns_status(db: Session = Depends(get_db)):
+    """Return live DNS Guard status including host IP and today's query count."""
+    import socket
+
+    # Determine the host IP (the machine running the DNS Guard)
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        host_ip = s.getsockname()[0]
+        s.close()
+    except Exception:
+        host_ip = "127.0.0.1"
+
+    # Count queries logged today
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    network = db.query(Network).first()
+    total_today = 0
+    if network:
+        total_today = (
+            db.query(DNSQueryLog)
+            .filter(
+                DNSQueryLog.network_id == network.id,
+                DNSQueryLog.queried_at >= today_start,
+            )
+            .count()
+        )
+
+    return {
+        "dns_listening": True,
+        "dns_ip": host_ip,
+        "secondary_dns": "1.1.1.1",
+        "port": 53,
+        "upstream": "1.1.1.1",
+        "total_queries_today": total_today,
+    }

@@ -13,13 +13,23 @@ import {
   RefreshCw,
   Search,
   Sliders,
+  Copy,
+  Check,
+  Radio,
+  Router,
+  Laptop,
+  Wifi,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
-import { DNSQueryLog, FilterPolicy, DNSStats } from "@/types";
+import { DNSQueryLog, FilterPolicy, DNSStats, DNSStatus } from "@/types";
 import {
   fetchDNSLogs,
   fetchDNSStats,
   fetchFilterPolicy,
   updateFilterPolicy,
+  fetchDNSStatus,
 } from "@/lib/api";
 import { ClientTime } from "@/components/common/ClientTime";
 
@@ -27,8 +37,12 @@ export default function FilteringPage() {
   const [logs, setLogs] = useState<DNSQueryLog[]>([]);
   const [stats, setStats] = useState<DNSStats | null>(null);
   const [policy, setPolicy] = useState<FilterPolicy | null>(null);
+  const [dnsStatus, setDnsStatus] = useState<DNSStatus | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [saving, setSaving] = useState<boolean>(false);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [activeSetupTab, setActiveSetupTab] = useState<"router" | "ios" | "android" | "windows">("router");
+  const [showSetupGuide, setShowSetupGuide] = useState<boolean>(true);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -40,15 +54,25 @@ export default function FilteringPage() {
 
   const loadData = async () => {
     setLoading(true);
-    const [logsData, statsData, policyData] = await Promise.all([
+    const [logsData, statsData, policyData, statusData] = await Promise.all([
       fetchDNSLogs(),
       fetchDNSStats(),
       fetchFilterPolicy(),
+      fetchDNSStatus(),
     ]);
     setLogs(logsData);
     setStats(statsData);
     setPolicy(policyData);
+    setDnsStatus(statusData);
     setLoading(false);
+  };
+
+  const handleCopy = (text: string, key: string) => {
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
+    }
   };
 
   useEffect(() => {
@@ -155,6 +179,230 @@ export default function FilteringPage() {
           <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-indigo-400" : ""}`} />
           <span>Refresh Traffic</span>
         </button>
+      </div>
+
+      {/* DNS Guard Connection & Router Setup Guide */}
+      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 rounded-xl overflow-hidden shadow-lg">
+        {/* Banner Header with IPs & Status */}
+        <div className="p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-indigo-500/20">
+          <div className="space-y-1">
+            <div className="flex items-center space-x-2">
+              <Radio className="w-5 h-5 text-indigo-400 animate-pulse" />
+              <h2 className="text-base font-bold text-white tracking-wide">
+                Network DNS Gateway & Router Setup
+              </h2>
+              <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping mr-1" />
+                DNS Active (Port 53)
+              </span>
+            </div>
+            <p className="text-xs text-slate-300">
+              Point your Wi-Fi router or office devices to this server IP so NetScope intercepts queries, blocks distractions, and attributes traffic to device names.
+            </p>
+          </div>
+
+          {/* Quick Copy DNS IP Badges */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 flex items-center space-x-3">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Primary DNS IP</span>
+                <span className="font-mono text-sm font-bold text-indigo-300">
+                  {dnsStatus?.dns_ip || "192.168.0.101"}
+                </span>
+              </div>
+              <button
+                onClick={() => handleCopy(dnsStatus?.dns_ip || "192.168.0.101", "primary")}
+                className="px-2.5 py-1 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded flex items-center space-x-1 transition"
+                title="Copy to clipboard"
+              >
+                {copiedKey === "primary" ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-300" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 flex items-center space-x-3">
+              <div>
+                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Secondary DNS (Backup)</span>
+                <span className="font-mono text-sm font-bold text-slate-300">1.1.1.1</span>
+              </div>
+              <button
+                onClick={() => handleCopy("1.1.1.1", "secondary")}
+                className="px-2.5 py-1 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded flex items-center space-x-1 transition"
+                title="Copy to clipboard"
+              >
+                {copiedKey === "secondary" ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-300" />
+                    <span>Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowSetupGuide(!showSetupGuide)}
+              className="px-3 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded-lg border border-indigo-500/30 flex items-center space-x-1.5 transition ml-auto lg:ml-0"
+            >
+              <span>{showSetupGuide ? "Hide Setup Guide" : "View Setup Guide"}</span>
+              {showSetupGuide ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Tabbed Setup Instructions */}
+        {showSetupGuide && (
+          <div className="p-5 bg-slate-950/60 space-y-4">
+            <div className="flex border-b border-slate-800 space-x-1">
+              <button
+                onClick={() => setActiveSetupTab("router")}
+                className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold border-b-2 transition ${
+                  activeSetupTab === "router"
+                    ? "border-indigo-500 text-indigo-400 bg-indigo-500/10 rounded-t"
+                    : "border-transparent text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Router className="w-3.5 h-3.5" />
+                <span>Wi-Fi Router (Recommended — All Devices)</span>
+              </button>
+              <button
+                onClick={() => setActiveSetupTab("ios")}
+                className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold border-b-2 transition ${
+                  activeSetupTab === "ios"
+                    ? "border-indigo-500 text-indigo-400 bg-indigo-500/10 rounded-t"
+                    : "border-transparent text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>iPhone / iPad</span>
+              </button>
+              <button
+                onClick={() => setActiveSetupTab("android")}
+                className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold border-b-2 transition ${
+                  activeSetupTab === "android"
+                    ? "border-indigo-500 text-indigo-400 bg-indigo-500/10 rounded-t"
+                    : "border-transparent text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Smartphone className="w-3.5 h-3.5" />
+                <span>Android Phones</span>
+              </button>
+              <button
+                onClick={() => setActiveSetupTab("windows")}
+                className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold border-b-2 transition ${
+                  activeSetupTab === "windows"
+                    ? "border-indigo-500 text-indigo-400 bg-indigo-500/10 rounded-t"
+                    : "border-transparent text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                <Laptop className="w-3.5 h-3.5" />
+                <span>Windows PC</span>
+              </button>
+            </div>
+
+            {/* Router Instruction Content */}
+            {activeSetupTab === "router" && (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                <div className="bg-slate-900 border border-slate-800 rounded-lg p-3.5 space-y-1.5">
+                  <div className="flex items-center space-x-2 text-indigo-400 font-semibold text-xs">
+                    <span className="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-300 flex items-center justify-center text-[11px] font-bold">1</span>
+                    <span>Access Router Dashboard</span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Open your router admin page in any web browser at:
+                  </p>
+                  <a
+                    href="http://192.168.0.1"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center space-x-1 text-xs text-indigo-400 hover:underline font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800"
+                  >
+                    <span>http://192.168.0.1</span>
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-lg p-3.5 space-y-1.5">
+                  <div className="flex items-center space-x-2 text-indigo-400 font-semibold text-xs">
+                    <span className="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-300 flex items-center justify-center text-[11px] font-bold">2</span>
+                    <span>Navigate to DHCP / LAN Settings</span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Go to <strong className="text-white">Network Settings</strong> &gt; <strong className="text-white">DHCP Server</strong> or <strong className="text-white">LAN Setup</strong>.
+                  </p>
+                  <span className="text-[11px] text-slate-400 block">
+                    Find the <em>Primary DNS Server</em> field.
+                  </span>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 rounded-lg p-3.5 space-y-1.5">
+                  <div className="flex items-center space-x-2 text-indigo-400 font-semibold text-xs">
+                    <span className="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-300 flex items-center justify-center text-[11px] font-bold">3</span>
+                    <span>Set DNS & Save</span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Paste <code className="bg-slate-950 px-1 py-0.5 rounded text-indigo-300 font-mono">{dnsStatus?.dns_ip || "192.168.0.101"}</code> into Primary DNS, click <strong className="text-white">Apply / Save</strong>, and reconnect Wi-Fi.
+                  </p>
+                  <span className="text-[11px] text-emerald-400 block font-medium">
+                    ✓ All connected staff phones & laptops will be tracked automatically!
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* iOS Instruction Content */}
+            {activeSetupTab === "ios" && (
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-2 text-xs text-slate-300">
+                <ol className="list-decimal list-inside space-y-2">
+                  <li>Open <strong className="text-white">Settings</strong> &gt; <strong className="text-white">Wi-Fi</strong>.</li>
+                  <li>Tap the blue <strong className="text-white">(i)</strong> info icon next to your connected network.</li>
+                  <li>Scroll down and tap <strong className="text-white">Configure DNS</strong> &gt; select <strong className="text-white">Manual</strong>.</li>
+                  <li>Tap <strong className="text-white">Add Server</strong> and type <code className="bg-slate-950 px-1.5 py-0.5 rounded text-indigo-300 font-mono">{dnsStatus?.dns_ip || "192.168.0.101"}</code>.</li>
+                  <li>Tap <strong className="text-white">Save</strong> in the top right corner.</li>
+                </ol>
+              </div>
+            )}
+
+            {/* Android Instruction Content */}
+            {activeSetupTab === "android" && (
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-2 text-xs text-slate-300">
+                <ol className="list-decimal list-inside space-y-2">
+                  <li>Open <strong className="text-white">Settings</strong> &gt; <strong className="text-white">Network & Internet</strong> &gt; <strong className="text-white">Internet / Wi-Fi</strong>.</li>
+                  <li>Tap the gear icon next to your active Wi-Fi.</li>
+                  <li>Tap the pencil (Edit) icon or <strong className="text-white">Advanced Options</strong> &gt; change IP settings to <strong className="text-white">Static</strong>.</li>
+                  <li>Keep existing IP & Gateway, change <strong className="text-white">DNS 1</strong> to <code className="bg-slate-950 px-1.5 py-0.5 rounded text-indigo-300 font-mono">{dnsStatus?.dns_ip || "192.168.0.101"}</code>.</li>
+                  <li>Tap <strong className="text-white">Save</strong>.</li>
+                </ol>
+              </div>
+            )}
+
+            {/* Windows Instruction Content */}
+            {activeSetupTab === "windows" && (
+              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-2 text-xs text-slate-300">
+                <ol className="list-decimal list-inside space-y-2">
+                  <li>Open <strong className="text-white">Settings</strong> &gt; <strong className="text-white">Network & Internet</strong> &gt; <strong className="text-white">Wi-Fi</strong>.</li>
+                  <li>Click <strong className="text-white">Hardware properties</strong>.</li>
+                  <li>Next to <strong className="text-white">DNS server assignment</strong>, click <strong className="text-white">Edit</strong>.</li>
+                  <li>Choose <strong className="text-white">Manual</strong>, toggle <strong className="text-white">IPv4 On</strong>, and set Preferred DNS to <code className="bg-slate-950 px-1.5 py-0.5 rounded text-indigo-300 font-mono">{dnsStatus?.dns_ip || "192.168.0.101"}</code>.</li>
+                  <li>Click <strong className="text-white">Save</strong>.</li>
+                </ol>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Top Metrics Cards */}

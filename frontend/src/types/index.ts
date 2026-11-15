@@ -102,3 +102,13 @@ export interface DNSStats {
   top_devices: { ip: string; hostname: string; count: number }[];
 }
 
+export interface DNSStatus {
+  dns_listening: boolean;
+  dns_ip: string;
+  secondary_dns?: string;
+  port: number;
+  upstream?: string;
+  total_queries_today: number;
+}
+
+

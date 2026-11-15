@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -68,11 +70,16 @@ func main() {
 	if *dnsGuard {
 		fmt.Println("=======================================================")
 		fmt.Printf(" NetScope Guard: DNS Filter & Social Media Sinkhole\n")
-		fmt.Printf(" Listening on: %s | Upstream: %s | Social Media Block: %v\n", *dnsListen, *dnsUpstream, *blockSocial)
+		fmt.Printf(" Listening on: %s | Upstream: %s | Backend: %s\n", *dnsListen, *dnsUpstream, *serverFlag)
 		fmt.Println("=======================================================")
 
 		engine := dnsfilter.NewFilterEngine(*blockSocial)
 		dnsSrv := dnsfilter.NewDNSServer(*dnsListen, *dnsUpstream, engine)
+
+		serverURL := *serverFlag
+		if serverURL == "" {
+			serverURL = "http://localhost:8000"
+		}
 
 		dnsSrv.SetLogCallback(func(log dnsfilter.QueryLog) {
 			statusTag := "[ALLOWED]"
@@ -81,6 +88,25 @@ func main() {
 			}
 			fmt.Printf("[%s] %-15s -> %-30s (%s) %s\n",
 				log.Timestamp.Format("15:04:05"), log.ClientIP, log.Domain, log.ServiceName, statusTag)
+
+			// Forward to central NetScope API
+			go func(l dnsfilter.QueryLog) {
+				payload, err := json.Marshal(map[string]interface{}{
+					"client_ip":    l.ClientIP,
+					"domain":       l.Domain,
+					"category":     string(l.Category),
+					"service_name": l.ServiceName,
+					"is_blocked":   l.IsBlocked,
+					"query_type":   l.QueryType,
+				})
+				if err == nil {
+					endpoint := fmt.Sprintf("%s/api/v1/filtering/logs", serverURL)
+					resp, postErr := http.Post(endpoint, "application/json", bytes.NewReader(payload))
+					if postErr == nil {
+						resp.Body.Close()
+					}
+				}
+			}(log)
 		})
 
 		if err := dnsSrv.Start(ctx); err != nil {

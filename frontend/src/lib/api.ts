@@ -1,4 +1,4 @@
-import { Alert, Device, Network, NetworkMetric, DNSQueryLog, FilterPolicy, DNSStats } from "@/types";
+import { Alert, Device, Network, NetworkMetric, DNSQueryLog, FilterPolicy, DNSStats, DNSStatus } from "@/types";
 
 const rawUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const API_BASE_URL = (
@@ -126,6 +126,22 @@ export async function fetchDNSStats(): Promise<DNSStats> {
       allowed_queries: 0,
       top_social_apps: [],
       top_devices: [],
+    };
+  }
+}
+
+export async function fetchDNSStatus(): Promise<DNSStatus> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/v1/filtering/status`);
+    if (!res.ok) throw new Error("failed");
+    return await res.json();
+  } catch {
+    return {
+      dns_listening: false,
+      dns_ip: "192.168.0.101",
+      secondary_dns: "1.1.1.1",
+      port: 53,
+      total_queries_today: 0,
     };
   }
 }
