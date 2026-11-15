@@ -12,6 +12,8 @@ import {
   Settings,
   Shield,
   ShieldAlert,
+  Crown,
+  Globe,
 } from "lucide-react";
 
 const navigation = [
@@ -21,6 +23,8 @@ const navigation = [
   { name: "Traffic Guard", href: "/filtering", icon: Shield },
   { name: "Security Alerts", href: "/alerts", icon: ShieldAlert },
   { name: "Settings & Agent", href: "/settings", icon: Settings },
+  { name: "Admin Console", href: "/admin", icon: Crown },
+  { name: "Landing Page", href: "/landing", icon: Globe },
 ];
 
 export function Sidebar() {

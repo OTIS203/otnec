@@ -7,7 +7,7 @@ export function ClientTime({
   format = "time",
 }: {
   isoString: string;
-  format?: "time" | "datetime";
+  format?: "time" | "datetime" | "date";
 }) {
   const [mounted, setMounted] = useState(false);
 
@@ -23,6 +23,9 @@ export function ClientTime({
     const d = new Date(isoString);
     if (format === "time") {
       return <span>{d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>;
+    }
+    if (format === "date") {
+      return <span>{d.toLocaleDateString([], { dateStyle: "medium" })}</span>;
     }
     return <span>{d.toLocaleString([], { dateStyle: "short", timeStyle: "short" })}</span>;
   } catch {

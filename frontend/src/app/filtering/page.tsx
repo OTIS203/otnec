@@ -22,10 +22,13 @@ import {
   ExternalLink,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   Calendar,
   Coffee,
   Briefcase,
+  Sparkles,
 } from "lucide-react";
 import { DNSQueryLog, FilterPolicy, DNSStats, DNSStatus } from "@/types";
 import {
@@ -46,7 +49,7 @@ export default function FilteringPage() {
   const [saving, setSaving] = useState<boolean>(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeSetupTab, setActiveSetupTab] = useState<"router" | "ios" | "android" | "windows">("router");
-  const [showSetupGuide, setShowSetupGuide] = useState<boolean>(true);
+  const [showSetupGuide, setShowSetupGuide] = useState<boolean>(false);
 
   // Schedule Policy States
   const [scheduleEnabled, setScheduleEnabled] = useState<boolean>(false);
@@ -56,11 +59,16 @@ export default function FilteringPage() {
   const [lunchEnd, setLunchEnd] = useState<string>("13:00");
   const [weekdaysOnly, setWeekdaysOnly] = useState<boolean>(true);
   const [savingSchedule, setSavingSchedule] = useState<boolean>(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
   // Filters
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // New Custom Domain
   const [newDomain, setNewDomain] = useState<string>("");
@@ -130,6 +138,7 @@ export default function FilteringPage() {
 
   const handleSaveSchedule = async () => {
     setSavingSchedule(true);
+    setSaveSuccessMsg(null);
     const updated = await updateFilterPolicy({
       schedule_enabled: scheduleEnabled,
       schedule_work_start: workStart,
@@ -140,9 +149,19 @@ export default function FilteringPage() {
     });
     if (updated) {
       setPolicy(updated);
+      setSaveSuccessMsg("Schedule saved & policy active!");
+      setTimeout(() => setSaveSuccessMsg(null), 4000);
       await loadData();
     }
     setSavingSchedule(false);
+  };
+
+  const applyPreset = (wStart: string, wEnd: string, lStart: string, lEnd: string) => {
+    setScheduleEnabled(true);
+    setWorkStart(wStart);
+    setWorkEnd(wEnd);
+    setLunchStart(lStart);
+    setLunchEnd(lEnd);
   };
 
   const handleAddCustomBlock = async () => {
@@ -194,6 +213,14 @@ export default function FilteringPage() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
+  // Pagination calculation
+  const totalEntries = filteredLogs.length;
+  const totalPages = Math.ceil(totalEntries / pageSize) || 1;
+  const paginatedLogs = filteredLogs.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -202,246 +229,272 @@ export default function FilteringPage() {
           <div className="flex items-center space-x-2">
             <h1 className="text-2xl font-bold text-white tracking-tight">Traffic Guard & Content Control</h1>
             <span className="px-2 py-0.5 rounded text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-              Live DNS Filter
+              OTNET Guard
             </span>
           </div>
           <p className="text-sm text-slate-400 mt-1">
-            Audit which social media platforms staff devices are accessing in real time and enforce network-wide block rules.
+            Enforce scheduled work-hour policies, audit staff device lookups, and sinkhole distracting domains.
           </p>
         </div>
-        <button
-          onClick={loadData}
-          disabled={loading}
-          className="flex items-center space-x-2 px-3.5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-750 text-slate-200 rounded-lg border border-slate-700 transition"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-indigo-400" : ""}`} />
-          <span>Refresh Traffic</span>
-        </button>
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setShowSetupGuide(!showSetupGuide)}
+            className="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-indigo-300 rounded-lg border border-indigo-500/30 transition"
+          >
+            <Wifi className="w-3.5 h-3.5" />
+            <span>{showSetupGuide ? "Hide Setup Guide" : "DNS Setup Guide"}</span>
+          </button>
+          <button
+            onClick={loadData}
+            disabled={loading}
+            className="flex items-center space-x-2 px-3.5 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-750 text-slate-200 rounded-lg border border-slate-700 transition"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-indigo-400" : ""}`} />
+            <span>Refresh</span>
+          </button>
+        </div>
       </div>
 
-      {/* DNS Guard Connection & Router Setup Guide */}
-      <div className="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-indigo-500/30 rounded-xl overflow-hidden shadow-lg">
-        {/* Banner Header with IPs & Status */}
-        <div className="p-5 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 border-b border-indigo-500/20">
-          <div className="space-y-1">
-            <div className="flex items-center space-x-2">
-              <Radio className="w-5 h-5 text-indigo-400 animate-pulse" />
-              <h2 className="text-base font-bold text-white tracking-wide">
-                Network DNS Gateway & Router Setup
-              </h2>
-              <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping mr-1" />
-                DNS Active (Port 53)
-              </span>
+      {/* PROMINENT TOP CARD: Scheduled Access Policy (Work Hours & Lunch Break Automation) */}
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-950/30 to-slate-900 border-2 border-indigo-500/40 rounded-2xl p-6 shadow-xl space-y-5">
+        {/* Card Header with Live Status */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-4 border-b border-indigo-500/20 gap-3">
+          <div className="flex items-center space-x-3.5">
+            <div className="w-11 h-11 rounded-xl bg-indigo-600/25 text-indigo-300 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <Clock className="w-6 h-6" />
             </div>
-            <p className="text-xs text-slate-300">
-              Point your Wi-Fi router or office devices to this server IP so OTNET intercepts queries, blocks distractions, and attributes traffic to device names.
-            </p>
-          </div>
-
-          {/* Quick Copy DNS IP Badges */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 flex items-center space-x-3">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Primary DNS IP</span>
-                <span className="font-mono text-sm font-bold text-indigo-300">
-                  {dnsStatus?.dns_ip || "192.168.0.101"}
+            <div>
+              <div className="flex items-center space-x-2.5">
+                <h2 className="text-base font-bold text-white tracking-wide">
+                  Scheduled Access Policies (Work Hours & Lunch Break)
+                </h2>
+                <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+                  Automation
                 </span>
               </div>
-              <button
-                onClick={() => handleCopy(dnsStatus?.dns_ip || "192.168.0.101", "primary")}
-                className="px-2.5 py-1 text-xs font-medium bg-indigo-600 hover:bg-indigo-500 text-white rounded flex items-center space-x-1 transition"
-                title="Copy to clipboard"
-              >
-                {copiedKey === "primary" ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy</span>
-                  </>
-                )}
-              </button>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Automatically blocks social media during office hours, and unblocks during lunch break and off-hours.
+              </p>
             </div>
+          </div>
 
-            <div className="bg-slate-950/80 border border-slate-800 rounded-lg px-3 py-2 flex items-center space-x-3">
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block tracking-wider">Secondary DNS (Backup)</span>
-                <span className="font-mono text-sm font-bold text-slate-300">1.1.1.1</span>
-              </div>
-              <button
-                onClick={() => handleCopy("1.1.1.1", "secondary")}
-                className="px-2.5 py-1 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded flex items-center space-x-1 transition"
-                title="Copy to clipboard"
+          <div className="flex items-center space-x-3">
+            {policy?.schedule_status_text && (
+              <span
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border flex items-center space-x-2 ${
+                  policy.is_schedule_active
+                    ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                    : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                }`}
               >
-                {copiedKey === "secondary" ? (
-                  <>
-                    <Check className="w-3.5 h-3.5 text-emerald-300" />
-                    <span>Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>Copy</span>
-                  </>
-                )}
-              </button>
-            </div>
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    policy.is_schedule_active ? "bg-rose-400 animate-ping" : "bg-emerald-400"
+                  }`}
+                />
+                <span>{policy.schedule_status_text}</span>
+              </span>
+            )}
+          </div>
+        </div>
 
+        {/* Quick Presets Row */}
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          <span className="text-xs font-semibold text-slate-400 flex items-center space-x-1">
+            <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Quick Presets:</span>
+          </span>
+          <button
+            onClick={() => applyPreset("08:00", "17:00", "12:00", "13:00")}
+            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-xs font-medium text-slate-200 transition"
+          >
+            🏢 Standard HQ (08:00–17:00 | Lunch: 12:00–13:00)
+          </button>
+          <button
+            onClick={() => applyPreset("09:00", "18:00", "13:00", "14:00")}
+            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-xs font-medium text-slate-200 transition"
+          >
+            💼 Corporate (09:00–18:00 | Lunch: 13:00–14:00)
+          </button>
+          <button
+            onClick={() => applyPreset("07:30", "16:30", "12:00", "13:00")}
+            className="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-750 border border-slate-700 text-xs font-medium text-slate-200 transition"
+          >
+            ⚡ Early Shift (07:30–16:30 | Lunch: 12:00–13:00)
+          </button>
+        </div>
+
+        {/* Time Inputs & Enforcement Controls */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Master Enable Toggle */}
+          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 flex items-center justify-between">
+            <div>
+              <span className="text-xs font-bold text-white block">Automated Schedule</span>
+              <span className="text-[11px] text-slate-400">
+                {scheduleEnabled ? "Active & Enforced" : "Disabled (Manual mode)"}
+              </span>
+            </div>
             <button
-              onClick={() => setShowSetupGuide(!showSetupGuide)}
-              className="px-3 py-2 text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-indigo-300 rounded-lg border border-indigo-500/30 flex items-center space-x-1.5 transition ml-auto lg:ml-0"
+              onClick={() => setScheduleEnabled(!scheduleEnabled)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                scheduleEnabled ? "bg-indigo-600" : "bg-slate-700"
+              }`}
             >
-              <span>{showSetupGuide ? "Hide Setup Guide" : "View Setup Guide"}</span>
-              {showSetupGuide ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  scheduleEnabled ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Work Hours Start & End */}
+          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
+            <div className="flex items-center space-x-1.5 text-xs font-semibold text-rose-300">
+              <Briefcase className="w-3.5 h-3.5" />
+              <span>Work Hours (Social Media Blocked)</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="time"
+                value={workStart}
+                onChange={(e) => setWorkStart(e.target.value)}
+                disabled={!scheduleEnabled}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white disabled:opacity-50 font-mono w-28 focus:outline-none focus:border-indigo-500"
+              />
+              <span className="text-slate-500 text-xs font-medium">to</span>
+              <input
+                type="time"
+                value={workEnd}
+                onChange={(e) => setWorkEnd(e.target.value)}
+                disabled={!scheduleEnabled}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white disabled:opacity-50 font-mono w-28 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+
+          {/* Lunch Break Start & End */}
+          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 space-y-2">
+            <div className="flex items-center space-x-1.5 text-xs font-semibold text-emerald-300">
+              <Coffee className="w-3.5 h-3.5" />
+              <span>Lunch Break (Social Media Allowed)</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <input
+                type="time"
+                value={lunchStart}
+                onChange={(e) => setLunchStart(e.target.value)}
+                disabled={!scheduleEnabled}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white disabled:opacity-50 font-mono w-28 focus:outline-none focus:border-indigo-500"
+              />
+              <span className="text-slate-500 text-xs font-medium">to</span>
+              <input
+                type="time"
+                value={lunchEnd}
+                onChange={(e) => setLunchEnd(e.target.value)}
+                disabled={!scheduleEnabled}
+                className="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white disabled:opacity-50 font-mono w-28 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+
+          {/* Weekday enforcement & Save button */}
+          <div className="p-4 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col justify-between space-y-2">
+            <label className="flex items-center space-x-2 cursor-pointer text-xs text-slate-200 select-none font-medium">
+              <input
+                type="checkbox"
+                checked={weekdaysOnly}
+                onChange={(e) => setWeekdaysOnly(e.target.checked)}
+                disabled={!scheduleEnabled}
+                className="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0 disabled:opacity-50 w-4 h-4"
+              />
+              <span>Monday – Friday Only (Weekend Unblocked)</span>
+            </label>
+            <button
+              onClick={handleSaveSchedule}
+              disabled={savingSchedule}
+              className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-bold transition disabled:opacity-50 flex items-center justify-center space-x-2 shadow-md shadow-indigo-600/30"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${savingSchedule ? "animate-spin" : ""}`} />
+              <span>{savingSchedule ? "Saving Schedule..." : "Save Schedule Policy"}</span>
             </button>
           </div>
         </div>
 
-        {/* Tabbed Setup Instructions */}
-        {showSetupGuide && (
-          <div className="p-5 bg-slate-950/60 space-y-4">
-            <div className="flex border-b border-slate-800 space-x-1">
+        {/* Visual 24-Hour Timeline Bar */}
+        <div className="pt-2 border-t border-indigo-500/20 space-y-2">
+          <div className="flex items-center justify-between text-[11px] text-slate-400">
+            <span className="font-semibold text-slate-300">24-Hour Daily Policy Distribution:</span>
+            <div className="flex items-center space-x-4">
+              <span className="flex items-center space-x-1">
+                <span className="w-2.5 h-2.5 rounded bg-rose-500" />
+                <span className="text-rose-300">Blocked ({workStart}–{lunchStart}, {lunchEnd}–{workEnd})</span>
+              </span>
+              <span className="flex items-center space-x-1">
+                <span className="w-2.5 h-2.5 rounded bg-emerald-500" />
+                <span className="text-emerald-300">Lunch Break ({lunchStart}–{lunchEnd})</span>
+              </span>
+              <span className="flex items-center space-x-1">
+                <span className="w-2.5 h-2.5 rounded bg-slate-700" />
+                <span>Off-Hours (Allowed)</span>
+              </span>
+            </div>
+          </div>
+          <div className="w-full h-3 rounded-full bg-slate-800 overflow-hidden flex">
+            <div className="h-full bg-slate-700" style={{ width: "33%" }} title="Off Hours (Allowed)" />
+            <div className="h-full bg-rose-600" style={{ width: "17%" }} title="Work Hours (Blocked)" />
+            <div className="h-full bg-emerald-500" style={{ width: "5%" }} title="Lunch Break (Allowed)" />
+            <div className="h-full bg-rose-600" style={{ width: "16%" }} title="Work Hours (Blocked)" />
+            <div className="h-full bg-slate-700" style={{ width: "29%" }} title="Evening Off Hours (Allowed)" />
+          </div>
+          {saveSuccessMsg && (
+            <div className="text-xs font-semibold text-emerald-400 flex items-center space-x-1.5 pt-1">
+              <Check className="w-4 h-4 text-emerald-400" />
+              <span>{saveSuccessMsg}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Collapsible Router / Device DNS Setup Guide */}
+      {showSetupGuide && (
+        <div className="bg-slate-900 border border-indigo-500/30 rounded-xl overflow-hidden shadow-lg p-5 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div className="flex items-center space-x-2">
+              <Radio className="w-4 h-4 text-indigo-400" />
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">
+                DNS Gateway & Router Configuration
+              </h2>
+            </div>
+            <div className="flex items-center space-x-2">
+              <span className="text-xs text-slate-400 font-mono">
+                Primary: <strong className="text-indigo-300">{dnsStatus?.dns_ip || "192.168.0.101"}</strong>
+              </span>
               <button
-                onClick={() => setActiveSetupTab("router")}
-                className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold border-b-2 transition ${
-                  activeSetupTab === "router"
-                    ? "border-indigo-500 text-indigo-400 bg-indigo-500/10 rounded-t"
-                    : "border-transparent text-slate-400 hover:text-slate-200"
-                }`}
+                onClick={() => handleCopy(dnsStatus?.dns_ip || "192.168.0.101", "primary")}
+                className="px-2 py-1 text-xs bg-indigo-600 text-white rounded font-medium"
               >
-                <Router className="w-3.5 h-3.5" />
-                <span>Wi-Fi Router (Recommended — All Devices)</span>
-              </button>
-              <button
-                onClick={() => setActiveSetupTab("ios")}
-                className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold border-b-2 transition ${
-                  activeSetupTab === "ios"
-                    ? "border-indigo-500 text-indigo-400 bg-indigo-500/10 rounded-t"
-                    : "border-transparent text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>iPhone / iPad</span>
-              </button>
-              <button
-                onClick={() => setActiveSetupTab("android")}
-                className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold border-b-2 transition ${
-                  activeSetupTab === "android"
-                    ? "border-indigo-500 text-indigo-400 bg-indigo-500/10 rounded-t"
-                    : "border-transparent text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                <Smartphone className="w-3.5 h-3.5" />
-                <span>Android Phones</span>
-              </button>
-              <button
-                onClick={() => setActiveSetupTab("windows")}
-                className={`flex items-center space-x-2 px-4 py-2 text-xs font-semibold border-b-2 transition ${
-                  activeSetupTab === "windows"
-                    ? "border-indigo-500 text-indigo-400 bg-indigo-500/10 rounded-t"
-                    : "border-transparent text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                <Laptop className="w-3.5 h-3.5" />
-                <span>Windows PC</span>
+                {copiedKey === "primary" ? "Copied" : "Copy IP"}
               </button>
             </div>
-
-            {/* Router Instruction Content */}
-            {activeSetupTab === "router" && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-3.5 space-y-1.5">
-                  <div className="flex items-center space-x-2 text-indigo-400 font-semibold text-xs">
-                    <span className="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-300 flex items-center justify-center text-[11px] font-bold">1</span>
-                    <span>Access Router Dashboard</span>
-                  </div>
-                  <p className="text-xs text-slate-300">
-                    Open your router admin page in any web browser at:
-                  </p>
-                  <a
-                    href="http://192.168.0.1"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center space-x-1 text-xs text-indigo-400 hover:underline font-mono bg-slate-950 px-2 py-1 rounded border border-slate-800"
-                  >
-                    <span>http://192.168.0.1</span>
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-3.5 space-y-1.5">
-                  <div className="flex items-center space-x-2 text-indigo-400 font-semibold text-xs">
-                    <span className="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-300 flex items-center justify-center text-[11px] font-bold">2</span>
-                    <span>Navigate to DHCP / LAN Settings</span>
-                  </div>
-                  <p className="text-xs text-slate-300">
-                    Go to <strong className="text-white">Network Settings</strong> &gt; <strong className="text-white">DHCP Server</strong> or <strong className="text-white">LAN Setup</strong>.
-                  </p>
-                  <span className="text-[11px] text-slate-400 block">
-                    Find the <em>Primary DNS Server</em> field.
-                  </span>
-                </div>
-
-                <div className="bg-slate-900 border border-slate-800 rounded-lg p-3.5 space-y-1.5">
-                  <div className="flex items-center space-x-2 text-indigo-400 font-semibold text-xs">
-                    <span className="w-5 h-5 rounded-full bg-indigo-600/30 text-indigo-300 flex items-center justify-center text-[11px] font-bold">3</span>
-                    <span>Set DNS & Save</span>
-                  </div>
-                  <p className="text-xs text-slate-300">
-                    Paste <code className="bg-slate-950 px-1 py-0.5 rounded text-indigo-300 font-mono">{dnsStatus?.dns_ip || "192.168.0.101"}</code> into Primary DNS, click <strong className="text-white">Apply / Save</strong>, and reconnect Wi-Fi.
-                  </p>
-                  <span className="text-[11px] text-emerald-400 block font-medium">
-                    ✓ All connected staff phones & laptops will be tracked automatically!
-                  </span>
-                </div>
-              </div>
-            )}
-
-            {/* iOS Instruction Content */}
-            {activeSetupTab === "ios" && (
-              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-2 text-xs text-slate-300">
-                <ol className="list-decimal list-inside space-y-2">
-                  <li>Open <strong className="text-white">Settings</strong> &gt; <strong className="text-white">Wi-Fi</strong>.</li>
-                  <li>Tap the blue <strong className="text-white">(i)</strong> info icon next to your connected network.</li>
-                  <li>Scroll down and tap <strong className="text-white">Configure DNS</strong> &gt; select <strong className="text-white">Manual</strong>.</li>
-                  <li>Tap <strong className="text-white">Add Server</strong> and type <code className="bg-slate-950 px-1.5 py-0.5 rounded text-indigo-300 font-mono">{dnsStatus?.dns_ip || "192.168.0.101"}</code>.</li>
-                  <li>Tap <strong className="text-white">Save</strong> in the top right corner.</li>
-                </ol>
-              </div>
-            )}
-
-            {/* Android Instruction Content */}
-            {activeSetupTab === "android" && (
-              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-2 text-xs text-slate-300">
-                <ol className="list-decimal list-inside space-y-2">
-                  <li>Open <strong className="text-white">Settings</strong> &gt; <strong className="text-white">Network & Internet</strong> &gt; <strong className="text-white">Internet / Wi-Fi</strong>.</li>
-                  <li>Tap the gear icon next to your active Wi-Fi.</li>
-                  <li>Tap the pencil (Edit) icon or <strong className="text-white">Advanced Options</strong> &gt; change IP settings to <strong className="text-white">Static</strong>.</li>
-                  <li>Keep existing IP & Gateway, change <strong className="text-white">DNS 1</strong> to <code className="bg-slate-950 px-1.5 py-0.5 rounded text-indigo-300 font-mono">{dnsStatus?.dns_ip || "192.168.0.101"}</code>.</li>
-                  <li>Tap <strong className="text-white">Save</strong>.</li>
-                </ol>
-              </div>
-            )}
-
-            {/* Windows Instruction Content */}
-            {activeSetupTab === "windows" && (
-              <div className="bg-slate-900 border border-slate-800 rounded-lg p-4 space-y-2 text-xs text-slate-300">
-                <ol className="list-decimal list-inside space-y-2">
-                  <li>Open <strong className="text-white">Settings</strong> &gt; <strong className="text-white">Network & Internet</strong> &gt; <strong className="text-white">Wi-Fi</strong>.</li>
-                  <li>Click <strong className="text-white">Hardware properties</strong>.</li>
-                  <li>Next to <strong className="text-white">DNS server assignment</strong>, click <strong className="text-white">Edit</strong>.</li>
-                  <li>Choose <strong className="text-white">Manual</strong>, toggle <strong className="text-white">IPv4 On</strong>, and set Preferred DNS to <code className="bg-slate-950 px-1.5 py-0.5 rounded text-indigo-300 font-mono">{dnsStatus?.dns_ip || "192.168.0.101"}</code>.</li>
-                  <li>Click <strong className="text-white">Save</strong>.</li>
-                </ol>
-              </div>
-            )}
           </div>
-        )}
-      </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-300">
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1">
+              <div className="font-bold text-indigo-300">1. Mobile Hotspot (Easiest)</div>
+              <p>Connect devices to Windows Hotspot <strong>OTIS DNS</strong>. NetScope will intercept 100% of DNS automatically on <code>192.168.137.1</code>.</p>
+            </div>
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1">
+              <div className="font-bold text-indigo-300">2. Router DHCP Setup</div>
+              <p>Log in to router (192.168.0.1) &gt; DHCP Server &gt; Set Primary DNS to <code>{dnsStatus?.dns_ip || "192.168.0.101"}</code>.</p>
+            </div>
+            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1">
+              <div className="font-bold text-indigo-300">3. Device Static DNS</div>
+              <p>On phone/laptop Wi-Fi settings, switch to Static IP and set DNS 1 to <code>{dnsStatus?.dns_ip || "192.168.0.101"}</code>.</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Top Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -500,153 +553,13 @@ export default function FilteringPage() {
         </div>
       </div>
 
-      {/* Scheduled Access Policies (Office Hours Automation) */}
-      <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 gap-3">
-          <div className="flex items-center space-x-3">
-            <div className="w-9 h-9 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center space-x-2">
-                <h2 className="text-sm font-bold text-white uppercase tracking-wider">
-                  Scheduled Access Automation
-                </h2>
-                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                  Feature #1
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Automatically block social media during work hours, and unblock during lunch breaks & off-hours.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            {policy?.schedule_status_text && (
-              <span
-                className={`px-3 py-1 rounded-full text-xs font-semibold border flex items-center space-x-1.5 ${
-                  policy.is_schedule_active
-                    ? "bg-rose-500/15 text-rose-300 border-rose-500/30"
-                    : "bg-emerald-500/15 text-emerald-300 border-emerald-500/30"
-                }`}
-              >
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    policy.is_schedule_active ? "bg-rose-400 animate-ping" : "bg-emerald-400"
-                  }`}
-                />
-                <span>{policy.schedule_status_text}</span>
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Schedule Controls */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-center">
-          {/* Master Toggle */}
-          <div className="p-3.5 rounded-lg bg-slate-950/60 border border-slate-800 flex items-center justify-between">
-            <div>
-              <span className="text-xs font-semibold text-white block">Automated Schedule</span>
-              <span className="text-[11px] text-slate-400">
-                {scheduleEnabled ? "Active & Enforced" : "Disabled (Manual)"}
-              </span>
-            </div>
-            <button
-              onClick={() => setScheduleEnabled(!scheduleEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                scheduleEnabled ? "bg-indigo-600" : "bg-slate-700"
-              }`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  scheduleEnabled ? "translate-x-6" : "translate-x-1"
-                }`}
-              />
-            </button>
-          </div>
-
-          {/* Work Hours Range */}
-          <div className="p-3.5 rounded-lg bg-slate-950/60 border border-slate-800 space-y-1.5">
-            <div className="flex items-center space-x-1.5 text-xs font-medium text-slate-300">
-              <Briefcase className="w-3.5 h-3.5 text-indigo-400" />
-              <span>Work Hours (Blocked)</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="time"
-                value={workStart}
-                onChange={(e) => setWorkStart(e.target.value)}
-                disabled={!scheduleEnabled}
-                className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white disabled:opacity-50 font-mono w-24 focus:outline-none focus:border-indigo-500"
-              />
-              <span className="text-slate-500 text-xs">to</span>
-              <input
-                type="time"
-                value={workEnd}
-                onChange={(e) => setWorkEnd(e.target.value)}
-                disabled={!scheduleEnabled}
-                className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white disabled:opacity-50 font-mono w-24 focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-          </div>
-
-          {/* Lunch Break Range */}
-          <div className="p-3.5 rounded-lg bg-slate-950/60 border border-slate-800 space-y-1.5">
-            <div className="flex items-center space-x-1.5 text-xs font-medium text-slate-300">
-              <Coffee className="w-3.5 h-3.5 text-amber-400" />
-              <span>Lunch Break (Allowed)</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="time"
-                value={lunchStart}
-                onChange={(e) => setLunchStart(e.target.value)}
-                disabled={!scheduleEnabled}
-                className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white disabled:opacity-50 font-mono w-24 focus:outline-none focus:border-indigo-500"
-              />
-              <span className="text-slate-500 text-xs">to</span>
-              <input
-                type="time"
-                value={lunchEnd}
-                onChange={(e) => setLunchEnd(e.target.value)}
-                disabled={!scheduleEnabled}
-                className="bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs text-white disabled:opacity-50 font-mono w-24 focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-          </div>
-
-          {/* Actions & Weekdays Checkbox */}
-          <div className="p-3.5 rounded-lg bg-slate-950/60 border border-slate-800 flex flex-col justify-between space-y-2">
-            <label className="flex items-center space-x-2 cursor-pointer text-xs text-slate-300 select-none">
-              <input
-                type="checkbox"
-                checked={weekdaysOnly}
-                onChange={(e) => setWeekdaysOnly(e.target.checked)}
-                disabled={!scheduleEnabled}
-                className="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0 disabled:opacity-50"
-              />
-              <span>Monday – Friday only</span>
-            </label>
-            <button
-              onClick={handleSaveSchedule}
-              disabled={savingSchedule}
-              className="w-full px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-xs font-semibold transition disabled:opacity-50 flex items-center justify-center space-x-1.5"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${savingSchedule ? "animate-spin" : ""}`} />
-              <span>{savingSchedule ? "Saving..." : "Save Schedule"}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Control Panel: Category Policies & Custom Blacklist */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Policy Toggles */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
           <div className="flex items-center space-x-2 pb-3 border-b border-slate-800">
             <Sliders className="w-4 h-4 text-indigo-400" />
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Access Policy Controls</h2>
+            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Manual Policy Overrides</h2>
           </div>
 
           <div className="space-y-4">
@@ -780,17 +693,22 @@ export default function FilteringPage() {
         </div>
       </div>
 
-      {/* Real-time Query Activity Log */}
+      {/* Real-time Query Activity Log with PAGINATION */}
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-800">
           <div>
-            <h2 className="text-sm font-bold text-white uppercase tracking-wider">Live Device Traffic Stream</h2>
+            <div className="flex items-center space-x-2">
+              <h2 className="text-sm font-bold text-white uppercase tracking-wider">Live Device Traffic Stream</h2>
+              <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-800 text-slate-300">
+                {totalEntries} Queries
+              </span>
+            </div>
             <p className="text-xs text-slate-400 mt-0.5">
               Inspect target domains per device IP, hostname, and enforcement actions.
             </p>
           </div>
 
-          {/* Search & Filters */}
+          {/* Search, Category Filter, Status Filter & Page Size */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="relative">
               <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
@@ -798,14 +716,20 @@ export default function FilteringPage() {
                 type="text"
                 placeholder="Search device, IP, domain..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-52"
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className="pl-8 pr-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-48"
               />
             </div>
 
             <select
               value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setCurrentPage(1);
+              }}
               className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
             >
               <option value="all">All Categories</option>
@@ -816,12 +740,28 @@ export default function FilteringPage() {
 
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={(e) => {
+                setStatusFilter(e.target.value);
+                setCurrentPage(1);
+              }}
               className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
             >
               <option value="all">All Status</option>
               <option value="blocked">Blocked Only</option>
               <option value="allowed">Allowed Only</option>
+            </select>
+
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(1);
+              }}
+              className="bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-indigo-500"
+            >
+              <option value={10}>10 / page</option>
+              <option value={25}>25 / page</option>
+              <option value={50}>50 / page</option>
             </select>
           </div>
         </div>
@@ -841,8 +781,8 @@ export default function FilteringPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60">
-              {filteredLogs.length > 0 ? (
-                filteredLogs.map((log) => (
+              {paginatedLogs.length > 0 ? (
+                paginatedLogs.map((log) => (
                   <tr key={log.id} className="hover:bg-slate-800/40 transition">
                     <td className="py-2.5 px-3 font-medium text-white flex items-center space-x-2">
                       <Smartphone className="w-3.5 h-3.5 text-slate-400" />
@@ -892,8 +832,46 @@ export default function FilteringPage() {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination Footer Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pt-3 border-t border-slate-800 gap-3 text-xs text-slate-400">
+          <div>
+            Showing{" "}
+            <span className="font-semibold text-white">
+              {totalEntries === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+            </span>{" "}
+            to{" "}
+            <span className="font-semibold text-white">
+              {Math.min(currentPage * pageSize, totalEntries)}
+            </span>{" "}
+            of <span className="font-semibold text-white">{totalEntries}</span> traffic records
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1 transition"
+            >
+              <ChevronLeft className="w-3.5 h-3.5" />
+              <span>Previous</span>
+            </button>
+
+            <span className="px-3 py-1 rounded bg-slate-950 font-mono text-indigo-300 border border-slate-800">
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              disabled={currentPage >= totalPages}
+              className="px-2.5 py-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-300 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center space-x-1 transition"
+            >
+              <span>Next</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
