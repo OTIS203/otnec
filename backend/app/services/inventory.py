@@ -24,7 +24,7 @@ def process_scan_report(db: Session, network: Network, report: IngestReport) -> 
     new_count = 0
     updated_count = 0
 
-    for dev_in in report.devices:
+    for dev_in in (report.devices or []):
         discovered_ips.add(dev_in.ip_address)
         matched_dev: Device = None
 
@@ -138,7 +138,7 @@ def process_scan_report(db: Session, network: Network, report: IngestReport) -> 
             )
 
     # 3. Process Security Findings reported by agent
-    for finding in report.findings:
+    for finding in (report.findings or []):
         create_alert(
             db=db,
             network_id=network.id,

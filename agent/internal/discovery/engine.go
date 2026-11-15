@@ -69,12 +69,14 @@ func (e *DiscoveryEngine) Run(ctx context.Context) (*models.ScanReport, error) {
 	}
 
 	report := &models.ScanReport{
-		ScanID:      fmt.Sprintf("scan-%d", time.Now().Unix()),
-		AgentID:     e.opts.AgentUUID,
-		Subnet:      targetSubnet.SubnetCIDR,
-		StartedAt:   startTime,
-		TotalHosts:  len(hostIPs),
+		ScanID:        fmt.Sprintf("scan-%d", time.Now().Unix()),
+		AgentID:       e.opts.AgentUUID,
+		Subnet:        targetSubnet.SubnetCIDR,
+		StartedAt:     startTime,
+		TotalHosts:    len(hostIPs),
 		SecurityScore: 100, // Starts at 100, decremented by findings
+		Devices:       make([]models.DiscoveredDevice, 0),
+		Findings:      make([]models.SecurityAuditFinding, 0),
 	}
 
 	// 2. Concurrently run L2/L3 discovery and multicast listeners

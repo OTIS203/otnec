@@ -138,8 +138,8 @@ class IngestReport(BaseModel):
     duration_ms: int
     total_hosts: int
     active_hosts: int
-    devices: List[IngestDevice] = []
-    findings: List[IngestFinding] = []
+    devices: Optional[List[IngestDevice]] = []
+    findings: Optional[List[IngestFinding]] = []
     health_metrics: IngestHealth
     security_score: int = 100
 
