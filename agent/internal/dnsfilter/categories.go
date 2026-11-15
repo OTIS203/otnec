@@ -52,16 +52,28 @@ var socialMediaDomains = []struct {
 	{"TikTok", "tiktok.com"},
 	{"TikTok", "tiktokv.com"},
 	{"TikTok", "tiktokcdn.com"},
+	{"TikTok", "tiktokcdn-us.com"},
+	{"TikTok", "tiktokv.us"},
 	{"TikTok", "byteoversea.com"},
+	{"TikTok", "byteoversea.net"},
+	{"TikTok", "ibytedtos.com"},
+	{"TikTok", "ibyteimg.com"},
+	{"TikTok", "bytegecko.com"},
 	{"TikTok", "musical.ly"},
+	{"TikTok", "ttwstatic.com"},
 
-	// Meta / Instagram / Facebook / Threads / WhatsApp Web
+	// Meta / Instagram / Facebook / Threads / Messenger
 	{"Instagram", "instagram.com"},
 	{"Instagram", "cdninstagram.com"},
+	{"Instagram", "ig.me"},
 	{"Facebook", "facebook.com"},
 	{"Facebook", "fbcdn.net"},
 	{"Facebook", "fbsbx.com"},
 	{"Facebook", "meta.com"},
+	{"Facebook", "fb.com"},
+	{"Facebook", "fb.me"},
+	{"Facebook", "facebook.net"},
+	{"Facebook", "messenger.com"},
 	{"Threads", "threads.net"},
 
 	// X / Twitter
@@ -69,21 +81,25 @@ var socialMediaDomains = []struct {
 	{"X (Twitter)", "x.com"},
 	{"X (Twitter)", "t.co"},
 	{"X (Twitter)", "twimg.com"},
+	{"X (Twitter)", "twitterstat.us"},
 
 	// Snapchat
 	{"Snapchat", "snapchat.com"},
 	{"Snapchat", "sc-cdn.net"},
+	{"Snapchat", "snap-dev.net"},
+	{"Snapchat", "snapkit.com"},
 
 	// Reddit
 	{"Reddit", "reddit.com"},
 	{"Reddit", "redd.it"},
 	{"Reddit", "redditmedia.com"},
+	{"Reddit", "redditstatic.com"},
 
 	// Pinterest
 	{"Pinterest", "pinterest.com"},
 	{"Pinterest", "pinimg.com"},
 
-	// LinkedIn (if classified under social)
+	// LinkedIn
 	{"LinkedIn", "linkedin.com"},
 	{"LinkedIn", "licdn.com"},
 }
@@ -97,11 +113,16 @@ var streamingDomains = []struct {
 	{"YouTube", "youtu.be"},
 	{"YouTube", "googlevideo.com"},
 	{"YouTube", "ytimg.com"},
+	{"YouTube", "youtubei.googleapis.com"},
+	{"YouTube", "yt3.ggpht.com"},
 	{"Netflix", "netflix.com"},
 	{"Netflix", "nflxext.com"},
 	{"Netflix", "nflxvideo.net"},
+	{"Netflix", "nflximg.net"},
+	{"Netflix", "nflxso.net"},
 	{"Twitch", "twitch.tv"},
 	{"Twitch", "ttvnw.net"},
+	{"Twitch", "jtvnw.net"},
 }
 
 // SetBlockSocialMedia toggles blocking for social media platforms.
@@ -116,6 +137,32 @@ func (fe *FilterEngine) SetBlockStreaming(enabled bool) {
 	fe.mu.Lock()
 	defer fe.mu.Unlock()
 	fe.blockStreaming = enabled
+}
+
+// SetCustomBlacklist updates the active custom blacklisted domains.
+func (fe *FilterEngine) SetCustomBlacklist(domains []string) {
+	fe.mu.Lock()
+	defer fe.mu.Unlock()
+	fe.customBlacklist = make(map[string]bool, len(domains))
+	for _, d := range domains {
+		clean := strings.ToLower(strings.Trim(d, "."))
+		if clean != "" {
+			fe.customBlacklist[clean] = true
+		}
+	}
+}
+
+// SetCustomWhitelist updates the active custom whitelisted domains.
+func (fe *FilterEngine) SetCustomWhitelist(domains []string) {
+	fe.mu.Lock()
+	defer fe.mu.Unlock()
+	fe.customWhitelist = make(map[string]bool, len(domains))
+	for _, d := range domains {
+		clean := strings.ToLower(strings.Trim(d, "."))
+		if clean != "" {
+			fe.customWhitelist[clean] = true
+		}
+	}
 }
 
 // AddCustomBlacklist adds a domain rule to block.
@@ -153,6 +200,17 @@ func (fe *FilterEngine) Classify(domain string) MatchResult {
 		return MatchResult{
 			Category:    CategorySocialMedia,
 			ServiceName: "Custom Blocklist",
+			IsBlocked:   true,
+		}
+	}
+
+	// 2b. Apple iCloud Private Relay bypass protection (per official Apple enterprise spec:
+	// returning 0.0.0.0 for mask.icloud.com signals iOS to disable Private Relay on this Wi-Fi)
+	if clean == "mask.icloud.com" || clean == "mask-h2.icloud.com" ||
+		strings.HasSuffix(clean, ".mask.icloud.com") || strings.HasSuffix(clean, ".mask-h2.icloud.com") {
+		return MatchResult{
+			Category:    CategoryGeneral,
+			ServiceName: "iCloud Private Relay Bypass Guard",
 			IsBlocked:   true,
 		}
 	}

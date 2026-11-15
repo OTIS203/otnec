@@ -125,9 +125,13 @@ def ingest_query_log(payload: DNSQueryLogCreate, db: Session = Depends(get_db)):
     # Match device hostname if available
     hostname = payload.client_hostname
     if not hostname:
-        device = db.query(Device).filter(Device.ip_address == payload.client_ip).first()
-        if device:
-            hostname = device.hostname or device.custom_name or device.vendor
+        if payload.client_ip in ("127.0.0.1", "::1"):
+            import socket
+            hostname = f"{socket.gethostname()} (Host PC)"
+        else:
+            device = db.query(Device).filter(Device.ip_address == payload.client_ip).first()
+            if device:
+                hostname = device.hostname or device.custom_name or device.vendor
 
     log = DNSQueryLog(
         network_id=net_id,

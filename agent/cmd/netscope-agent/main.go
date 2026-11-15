@@ -81,6 +81,40 @@ func main() {
 			serverURL = "http://localhost:8000"
 		}
 
+		// Dynamically sync filter policies from backend every 5 seconds
+		go func() {
+			client := &http.Client{Timeout: 3 * time.Second}
+			ticker := time.NewTicker(5 * time.Second)
+			defer ticker.Stop()
+
+			type PolicyResp struct {
+				BlockSocialMedia bool     `json:"block_social_media"`
+				BlockStreaming   bool     `json:"block_streaming"`
+				BlockGaming      bool     `json:"block_gaming"`
+				CustomBlacklist  []string `json:"custom_blacklist"`
+				CustomWhitelist  []string `json:"custom_whitelist"`
+			}
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					resp, err := client.Get(fmt.Sprintf("%s/api/v1/filtering/policies", serverURL))
+					if err == nil && resp.StatusCode == 200 {
+						var pol PolicyResp
+						if decErr := json.NewDecoder(resp.Body).Decode(&pol); decErr == nil {
+							engine.SetBlockSocialMedia(pol.BlockSocialMedia)
+							engine.SetBlockStreaming(pol.BlockStreaming)
+							engine.SetCustomBlacklist(pol.CustomBlacklist)
+							engine.SetCustomWhitelist(pol.CustomWhitelist)
+						}
+						resp.Body.Close()
+					}
+				}
+			}
+		}()
+
 		dnsSrv.SetLogCallback(func(log dnsfilter.QueryLog) {
 			statusTag := "[ALLOWED]"
 			if log.IsBlocked {
