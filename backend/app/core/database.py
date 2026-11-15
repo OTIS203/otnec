@@ -1,22 +1,35 @@
+import logging
 from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.core.config import settings
 
-# Determine sync connection string
-db_url = settings.DATABASE_SYNC_URL
-if "sqlite" in db_url:
-    connect_args = {"check_same_thread": False}
-else:
-    connect_args = {}
+logger = logging.getLogger("otnet.database")
 
-engine = create_engine(
-    db_url,
-    echo=False,
-    connect_args=connect_args,
-    pool_pre_ping=True,
-)
+# Determine connection URL (prefers SUPABASE_DB_URL if defined, falls back to DATABASE_SYNC_URL)
+raw_url = settings.SUPABASE_DB_URL or settings.DATABASE_SYNC_URL
+
+# SQLAlchemy requires postgresql:// instead of legacy postgres://
+if raw_url.startswith("postgres://"):
+    raw_url = raw_url.replace("postgres://", "postgresql://", 1)
+
+db_url = raw_url
+
+engine_kwargs = {
+    "echo": False,
+    "pool_pre_ping": True,
+}
+
+if "sqlite" in db_url:
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    # PostgreSQL / Supabase pool configuration
+    engine_kwargs["pool_size"] = 10
+    engine_kwargs["max_overflow"] = 20
+    engine_kwargs["pool_recycle"] = 300
+
+engine = create_engine(db_url, **engine_kwargs)
 
 SessionLocal = sessionmaker(
     bind=engine,
@@ -43,4 +56,64 @@ def get_db() -> Generator[Session, None, None]:
 
 
 def init_db() -> None:
+    """Initialize schema tables and seed baseline admin if database is empty."""
     Base.metadata.create_all(bind=engine)
+
+    try:
+        from app.models.entities import Tenant, User, Network, ScheduledPolicy
+        from app.core.security import get_password_hash
+        from sqlalchemy import select
+
+        with SessionLocal() as db:
+            existing_user = db.execute(select(User)).first()
+            if not existing_user:
+                logger.info("Empty database detected. Seeding baseline OTNET entities...")
+                tenant = Tenant(name="Acme Corporation", slug="acme-corp")
+                db.add(tenant)
+                db.flush()
+
+                admin_user = User(
+                    tenant_id=tenant.id,
+                    email="admin@otnet.io",
+                    hashed_password=get_password_hash("OtnetSecure2026!"),
+                    role="owner",
+                    mfa_enabled=False,
+                )
+                db.add(admin_user)
+
+                analyst_user = User(
+                    tenant_id=tenant.id,
+                    email="analyst@acme-corp.com",
+                    hashed_password=get_password_hash("demo1234"),
+                    role="analyst",
+                    mfa_enabled=False,
+                )
+                db.add(analyst_user)
+
+                network = Network(
+                    tenant_id=tenant.id,
+                    name="Headquarters LAN",
+                    cidr_v4="192.168.0.0/24",
+                    gateway_ip="192.168.0.1",
+                    security_score=92,
+                    enrollment_token="otnet_live_948a2bc7190d",
+                )
+                db.add(network)
+                db.flush()
+
+                # Seed default business hours access policy
+                policy = ScheduledPolicy(
+                    network_id=network.id,
+                    work_start="08:00",
+                    work_end="17:00",
+                    lunch_start="12:00",
+                    lunch_end="13:00",
+                    mon_fri_only=True,
+                    is_enabled=True,
+                )
+                db.add(policy)
+
+                db.commit()
+                logger.info("Successfully seeded admin@otnet.io and baseline policies into database.")
+    except Exception as e:
+        logger.warning(f"Note on initial seed (tables may already be initialized): {e}")
