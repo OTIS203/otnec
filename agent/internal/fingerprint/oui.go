@@ -1,11 +1,34 @@
 package fingerprint
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"strings"
+	"sync"
+	"time"
+)
+
+var (
+	ouiCacheMu sync.RWMutex
+	ouiCache   = make(map[string]string)
+	httpClient = &http.Client{Timeout: 1500 * time.Millisecond}
 )
 
 // Embedded OUI prefix table for high-accuracy local lookup without external network dependency.
 var ouiDatabase = map[string]string{
+	// Tozed Kangwei (4G/5G Wireless Routers, CPEs, Gateways)
+	"98:a9:42": "Tozed Kangwei Tech Co., Ltd",
+	"70:72:cf": "Tozed Kangwei",
+	"bc:ba:e1": "Tozed Kangwei",
+
+	// Realtek Semiconductor (Wi-Fi adapters & Ethernet)
+	"40:5b:d8": "Realtek Semiconductor Corp.",
+	"00:af:a8": "Realtek Semiconductor Corp.",
+	"00:e0:4c": "Realtek Semiconductor Corp.",
+	"52:54:4c": "Realtek Semiconductor Corp.",
+	"70:4d:7b": "Realtek Semiconductor Corp.",
+
 	// Apple
 	"00:03:93": "Apple",
 	"00:05:02": "Apple",
@@ -34,11 +57,74 @@ var ouiDatabase = map[string]string{
 	"00:26:08": "Apple",
 	"00:26:4a": "Apple",
 	"00:26:b0": "Apple",
+	"04:0c:ce": "Apple",
+	"04:15:52": "Apple",
+	"04:26:65": "Apple",
+	"04:db:56": "Apple",
+	"04:e5:36": "Apple",
+	"08:00:07": "Apple",
+	"0c:30:21": "Apple",
+	"0c:4d:e9": "Apple",
+	"10:1c:0c": "Apple",
+	"10:40:f3": "Apple",
+	"14:10:9f": "Apple",
+	"14:20:5e": "Apple",
+	"14:5a:05": "Apple",
+	"18:34:51": "Apple",
+	"18:af:61": "Apple",
+	"1c:1a:c0": "Apple",
+	"20:76:8f": "Apple",
+	"24:a0:74": "Apple",
+	"28:0b:5c": "Apple",
+	"2c:be:08": "Apple",
+	"30:07:4d": "Apple",
+	"34:36:3b": "Apple",
+	"38:ca:84": "Apple",
 	"3c:06:30": "Apple",
 	"40:6c:8f": "Apple",
+	"44:4c:0c": "Apple",
+	"48:60:5f": "Apple",
+	"50:bc:96": "Apple",
+	"54:26:96": "Apple",
+	"5c:95:ae": "Apple",
+	"60:03:08": "Apple",
+	"64:76:ba": "Apple",
+	"68:9c:70": "Apple",
+	"6c:40:08": "Apple",
+	"70:14:a6": "Apple",
+	"74:b5:87": "Apple",
+	"78:31:c1": "Apple",
+	"7c:fa:df": "Apple",
+	"84:38:35": "Apple",
+	"88:6b:6e": "Apple",
+	"90:72:40": "Apple",
+	"94:e9:79": "Apple",
+	"98:01:a7": "Apple",
+	"9c:04:eb": "Apple",
 	"a4:83:e7": "Apple",
-	"f4:f5:d8": "Apple",
+	"a8:66:7f": "Apple",
+	"ac:bc:32": "Apple",
 	"ac:de:48": "Apple",
+	"b0:34:95": "Apple",
+	"b4:18:d1": "Apple",
+	"b8:78:26": "Apple",
+	"bc:54:36": "Apple",
+	"c0:84:7a": "Apple",
+	"c4:b3:01": "Apple",
+	"c8:6f:1d": "Apple",
+	"cc:29:f5": "Apple",
+	"d0:03:4b": "Apple",
+	"d4:dc:cd": "Apple",
+	"d8:30:62": "Apple",
+	"dc:52:85": "Apple",
+	"e0:66:78": "Apple",
+	"e4:e0:a6": "Apple",
+	"e8:80:2e": "Apple",
+	"ec:35:86": "Apple",
+	"f0:18:98": "Apple",
+	"f4:f5:d8": "Apple",
+	"f8:ff:c2": "Apple",
+	"fc:18:3c": "Apple",
 
 	// Google / Alphabet / Nest
 	"00:1a:11": "Google",
@@ -64,8 +150,106 @@ var ouiDatabase = map[string]string{
 	"00:21:19": "Samsung",
 	"00:23:39": "Samsung",
 	"00:26:37": "Samsung",
+	"08:08:c2": "Samsung",
+	"10:30:47": "Samsung",
+	"18:22:7e": "Samsung",
+	"20:55:31": "Samsung",
+	"24:4b:03": "Samsung",
+	"28:ba:b0": "Samsung",
 	"30:cd:a7": "Samsung",
+	"34:14:5f": "Samsung",
+	"3c:bb:fd": "Samsung",
+	"40:0e:85": "Samsung",
+	"44:80:eb": "Samsung",
 	"48:44:f7": "Samsung",
+	"50:c8:e5": "Samsung",
+	"54:92:be": "Samsung",
+	"58:c3:8b": "Samsung",
+	"60:a1:0a": "Samsung",
+	"64:77:91": "Samsung",
+	"70:2c:1f": "Samsung",
+	"78:47:1d": "Samsung",
+	"7c:64:56": "Samsung",
+	"84:25:19": "Samsung",
+	"8c:77:12": "Samsung",
+	"90:18:7c": "Samsung",
+	"94:63:72": "Samsung",
+	"98:39:8e": "Samsung",
+	"a0:0b:ba": "Samsung",
+	"a8:06:00": "Samsung",
+	"b0:c4:e7": "Samsung",
+	"b8:57:d8": "Samsung",
+	"c4:73:1e": "Samsung",
+	"cc:07:ab": "Samsung",
+	"d0:59:e4": "Samsung",
+	"d8:90:e8": "Samsung",
+	"e4:7c:f9": "Samsung",
+	"ec:e0:00": "Samsung",
+	"f4:7b:5e": "Samsung",
+	"fc:a1:3e": "Samsung",
+
+	// Transsion Holdings (Tecno / Infinix / Itel)
+	"80:32:53": "Tecno / Infinix (Transsion)",
+	"24:2f:d0": "Tecno / Infinix (Transsion)",
+	"bc:d1:d3": "Tecno / Infinix (Transsion)",
+	"8c:85:90": "Tecno / Infinix (Transsion)",
+	"08:3a:88": "Tecno / Infinix (Transsion)",
+	"f8:4d:fc": "Tecno / Infinix (Transsion)",
+	"4c:b9:ea": "Tecno / Infinix (Transsion)",
+	"58:24:29": "Tecno / Infinix (Transsion)",
+	"7c:1c:f1": "Tecno / Infinix (Transsion)",
+
+	// Xiaomi / Redmi / POCO
+	"f8:63:3f": "Xiaomi Communications",
+	"00:9e:c8": "Xiaomi",
+	"18:59:36": "Xiaomi",
+	"28:6c:07": "Xiaomi",
+	"34:80:0d": "Xiaomi",
+	"50:64:2b": "Xiaomi",
+	"64:09:80": "Xiaomi",
+	"74:51:ba": "Xiaomi",
+	"7c:1d:d9": "Xiaomi",
+	"88:c3:97": "Xiaomi",
+	"ac:c1:ee": "Xiaomi",
+	"d4:97:0b": "Xiaomi",
+	"fc:64:3a": "Xiaomi",
+
+	// Huawei / Honor
+	"dc:2c:6e": "Huawei Technologies",
+	"00:18:82": "Huawei Technologies",
+	"00:1e:10": "Huawei Technologies",
+	"00:25:9e": "Huawei Technologies",
+	"00:46:4b": "Huawei Technologies",
+	"0c:96:bf": "Huawei Technologies",
+	"10:47:80": "Huawei Technologies",
+	"20:08:ed": "Huawei Technologies",
+	"20:a6:80": "Huawei Technologies",
+	"28:6e:d4": "Huawei Technologies",
+	"34:cd:be": "Huawei Technologies",
+	"48:46:fb": "Huawei Technologies",
+	"e0:19:54": "Huawei Technologies",
+	"f4:c4:d8": "Huawei Technologies",
+
+	// Oppo / OnePlus / Realme
+	"14:98:77": "Oppo / OnePlus",
+	"2c:59:8a": "Oppo / OnePlus",
+	"38:f9:d3": "Oppo / OnePlus",
+	"4c:b1:6c": "Oppo / OnePlus",
+	"5c:e8:eb": "Oppo / OnePlus",
+	"78:02:f8": "Oppo / OnePlus",
+	"94:65:2d": "Oppo / OnePlus",
+	"b8:37:65": "Oppo / OnePlus",
+	"dc:16:b2": "Oppo / OnePlus",
+	"e4:aa:ea": "Oppo / OnePlus",
+
+	// Vivo
+	"20:df:77": "Vivo Mobile",
+	"28:ff:3e": "Vivo Mobile",
+	"4c:03:4f": "Vivo Mobile",
+	"58:2a:f7": "Vivo Mobile",
+	"88:63:df": "Vivo Mobile",
+	"ac:83:f3": "Vivo Mobile",
+	"d4:61:9d": "Vivo Mobile",
 
 	// Amazon / Ring / Eero
 	"00:fc:8b": "Amazon Technologies",
@@ -95,7 +279,7 @@ var ouiDatabase = map[string]string{
 	"bc:dd:c2": "Espressif Inc.",
 	"cc:50:e3": "Espressif Inc.",
 
-	// Networking & Infrastructure (Cisco, TP-Link, Netgear, Ubiquiti, MikroTik, Technicolor, Sagemcom)
+	// Networking & Infrastructure (Cisco, TP-Link, Netgear, Ubiquiti, MikroTik, Technicolor)
 	"00:00:0c": "Cisco Systems",
 	"00:01:42": "Cisco Systems",
 	"00:14:f6": "Cisco Systems",
@@ -107,9 +291,24 @@ var ouiDatabase = map[string]string{
 	"00:05:69": "VMware Virtual Adapter",
 	"00:0a:eb": "TP-Link Technologies",
 	"14:cc:20": "TP-Link Technologies",
+	"18:a6:f7": "TP-Link Technologies",
+	"1c:3b:f3": "TP-Link Technologies",
+	"20:dc:e6": "TP-Link Technologies",
+	"30:de:4b": "TP-Link Technologies",
 	"50:c7:bf": "TP-Link Technologies",
+	"60:32:b1": "TP-Link Technologies",
+	"70:4f:57": "TP-Link Technologies",
+	"78:8b:2a": "TP-Link Technologies",
+	"84:16:f9": "TP-Link Technologies",
+	"90:f6:52": "TP-Link Technologies",
 	"98:48:27": "TP-Link Technologies",
+	"a0:f3:c1": "TP-Link Technologies",
+	"b0:95:75": "TP-Link Technologies",
+	"c0:06:c3": "TP-Link Technologies",
+	"d8:07:b6": "TP-Link Technologies",
+	"e8:48:b8": "TP-Link Technologies",
 	"ec:08:6b": "TP-Link Technologies",
+	"f4:ec:38": "TP-Link Technologies",
 	"00:09:5b": "Netgear",
 	"00:14:6c": "Netgear",
 	"20:e5:2a": "Netgear",
@@ -131,6 +330,23 @@ var ouiDatabase = map[string]string{
 	"00:0e:0c": "Intel",
 	"00:13:e8": "Intel",
 	"00:1b:21": "Intel",
+	"08:11:96": "Intel",
+	"10:02:b5": "Intel",
+	"24:77:03": "Intel",
+	"34:13:e8": "Intel",
+	"3c:fd:fe": "Intel",
+	"48:51:b7": "Intel",
+	"5c:87:9c": "Intel",
+	"68:05:ca": "Intel",
+	"7c:b0:c2": "Intel",
+	"8c:8d:28": "Intel",
+	"94:e6:f7": "Intel",
+	"a4:4c:c8": "Intel",
+	"b8:b8:1e": "Intel",
+	"c8:5b:76": "Intel",
+	"d4:25:8b": "Intel",
+	"e8:2a:44": "Intel",
+	"fc:77:74": "Intel",
 	"00:14:22": "Dell",
 	"00:18:8b": "Dell",
 	"00:1e:4f": "Dell",
@@ -160,9 +376,23 @@ var ouiDatabase = map[string]string{
 	// IP Cameras (Hikvision, Dahua, Axis, Reolink)
 	"00:40:8c": "Axis Communications",
 	"44:19:b6": "Hangzhou Hikvision",
-	"bc:ba:e1": "Hangzhou Hikvision",
 	"38:af:29": "Zhejiang Dahua",
 	"48:ea:63": "Shenzhen Reolink",
+}
+
+// isRandomizedMAC checks if the MAC address has the IEEE 802 Locally Administered bit set.
+// Modern iOS, Android, and Windows devices randomize their MAC addresses by default on Wi-Fi.
+func isRandomizedMAC(clean string) bool {
+	if len(clean) < 2 {
+		return false
+	}
+	var firstByte byte
+	n, _ := fmt.Sscanf(clean[:2], "%x", &firstByte)
+	if n == 1 {
+		// Bit 1 = 1 (Locally Administered), Bit 0 = 0 (Unicast)
+		return (firstByte&0x02) != 0 && (firstByte&0x01) == 0
+	}
+	return false
 }
 
 // LookupOUI returns the hardware vendor string for a given MAC address.
@@ -170,14 +400,54 @@ func LookupOUI(mac string) string {
 	clean := strings.ToLower(strings.TrimSpace(mac))
 	clean = strings.ReplaceAll(clean, "-", ":")
 	if len(clean) < 8 {
-		return "Unknown"
+		return "Unknown Vendor"
 	}
 
 	prefix := clean[:8] // "xx:xx:xx"
+
+	// 1. Check local in-memory cache
+	ouiCacheMu.RLock()
+	if cached, ok := ouiCache[prefix]; ok {
+		ouiCacheMu.RUnlock()
+		return cached
+	}
+	ouiCacheMu.RUnlock()
+
+	// 2. Check embedded offline OUI database
 	if vendor, ok := ouiDatabase[prefix]; ok {
 		return vendor
 	}
 
-	return "Unknown Vendor"
-}
+	// 3. Detect Private / Randomized Wi-Fi MAC Address (Apple iOS / Android / Windows)
+	if isRandomizedMAC(clean) {
+		vendor := "Private Wi-Fi (Apple / Android Device)"
+		ouiCacheMu.Lock()
+		ouiCache[prefix] = vendor
+		ouiCacheMu.Unlock()
+		return vendor
+	}
 
+	// 4. Online API lookup fallback with 1.5s timeout
+	cleanNoColon := strings.ReplaceAll(prefix, ":", "")
+	url := fmt.Sprintf("https://api.maclookup.app/v2/macs/%s", cleanNoColon)
+	req, err := http.NewRequest("GET", url, nil)
+	if err == nil {
+		resp, err := httpClient.Do(req)
+		if err == nil && resp.StatusCode == 200 {
+			defer resp.Body.Close()
+			var result struct {
+				Success bool   `json:"success"`
+				Found   bool   `json:"found"`
+				Company string `json:"company"`
+			}
+			if err := json.NewDecoder(resp.Body).Decode(&result); err == nil && result.Found && result.Company != "" {
+				ouiCacheMu.Lock()
+				ouiCache[prefix] = result.Company
+				ouiCacheMu.Unlock()
+				return result.Company
+			}
+		}
+	}
+
+	return "Generic Network Device"
+}

@@ -75,8 +75,13 @@ func ClassifyDevice(
 	if strings.Contains(hLower, "iphone") || strings.Contains(hLower, "ipad") {
 		return models.DeviceTypePhone, "Apple iOS / iPadOS"
 	}
-	if strings.Contains(hLower, "android") || strings.Contains(hLower, "galaxy") || strings.Contains(hLower, "pixel") {
-		return models.DeviceTypePhone, "Android"
+	if strings.Contains(hLower, "android") || strings.Contains(hLower, "galaxy") || strings.Contains(hLower, "pixel") ||
+		strings.Contains(hLower, "itel") || strings.Contains(hLower, "tecno") || strings.Contains(hLower, "infinix") ||
+		strings.Contains(hLower, "xiaomi") || strings.Contains(hLower, "redmi") || strings.Contains(hLower, "oppo") ||
+		strings.Contains(hLower, "vivo") || strings.Contains(hLower, "realme") || strings.Contains(hLower, "oneplus") ||
+		strings.Contains(vLower, "tecno") || strings.Contains(vLower, "infinix") || strings.Contains(vLower, "vivo") ||
+		strings.Contains(vLower, "oppo") || strings.Contains(vLower, "private wi-fi") {
+		return models.DeviceTypePhone, "Android OS"
 	}
 
 	// 7. Workstations, Laptops & PCs

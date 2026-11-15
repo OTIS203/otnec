@@ -3,6 +3,9 @@ package discovery
 import (
 	"context"
 	"fmt"
+	"net"
+	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -138,6 +141,22 @@ func (e *DiscoveryEngine) Run(ctx context.Context) (*models.ScanReport, error) {
 
 	macTracker := make(map[string][]string) // For ARP spoofing detection: MAC -> [IPs]
 
+	// Extract local machine network interface IPs and hardware MACs
+	localIPs := make(map[string]string)
+	if ifaces, err := net.Interfaces(); err == nil {
+		for _, iface := range ifaces {
+			if addrs, err := iface.Addrs(); err == nil {
+				for _, a := range addrs {
+					if ipnet, ok := a.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+						if ip4 := ipnet.IP.To4(); ip4 != nil {
+							localIPs[ip4.String()] = iface.HardwareAddr.String()
+						}
+					}
+				}
+			}
+		}
+	}
+
 	for ip := range uniqueAliveIPs {
 		devWg.Add(1)
 		devSem <- struct{}{}
@@ -147,6 +166,12 @@ func (e *DiscoveryEngine) Run(ctx context.Context) (*models.ScanReport, error) {
 			defer func() { <-devSem }()
 
 			mac := arpCache[targetIP]
+			if mac == "" {
+				if localMac, ok := localIPs[targetIP]; ok {
+					mac = localMac
+				}
+			}
+
 			vendor := "Unknown Vendor"
 			if mac != "" {
 				vendor = fingerprint.LookupOUI(mac)
@@ -175,6 +200,23 @@ func (e *DiscoveryEngine) Run(ctx context.Context) (*models.ScanReport, error) {
 				}
 			}
 
+			// Reverse DNS query
+			if hostname == "" {
+				if names, err := net.LookupAddr(targetIP); err == nil && len(names) > 0 {
+					cleanName := strings.TrimSuffix(names[0], ".")
+					if cleanName != "" && cleanName != targetIP {
+						hostname = cleanName
+					}
+				}
+			}
+
+			// If it's this local machine, use host computer name
+			if _, isLocal := localIPs[targetIP]; isLocal || targetIP == "127.0.0.1" {
+				if h, err := os.Hostname(); err == nil && h != "" {
+					hostname = h
+				}
+			}
+
 			// Polite Port Scan
 			var openPorts []models.DiscoveredPort
 			var openPortNums []int
@@ -192,7 +234,7 @@ func (e *DiscoveryEngine) Run(ctx context.Context) (*models.ScanReport, error) {
 				}
 			}
 
-			isGateway := (targetIP == targetSubnet.GatewayIP)
+			isGateway := (targetIP == targetSubnet.GatewayIP || strings.HasSuffix(targetIP, ".1"))
 			devType, osGuess := fingerprint.ClassifyDevice(
 				vendor,
 				hostname,
@@ -201,6 +243,42 @@ func (e *DiscoveryEngine) Run(ctx context.Context) (*models.ScanReport, error) {
 				ssdpServer,
 				isGateway,
 			)
+
+			// Router Gateway identification
+			if isGateway {
+				devType = models.DeviceTypeRouter
+				if hostname == "" {
+					if vendor != "Unknown Vendor" && vendor != "Generic Network Device" && vendor != "" {
+						hostname = vendor + " Gateway"
+					} else {
+						hostname = "Network Gateway Router"
+					}
+				}
+			}
+
+			// Fallback device display name if still blank
+			if hostname == "" {
+				if strings.Contains(vendor, "Apple") {
+					hostname = "Apple Device"
+					if devType == models.DeviceTypeUnknown {
+						devType = models.DeviceTypePhone
+					}
+				} else if strings.Contains(vendor, "Tecno") || strings.Contains(vendor, "Infinix") {
+					hostname = "Tecno / Infinix Phone"
+					devType = models.DeviceTypePhone
+				} else if strings.Contains(vendor, "Xiaomi") {
+					hostname = "Xiaomi Device"
+					devType = models.DeviceTypePhone
+				} else if strings.Contains(vendor, "Samsung") {
+					hostname = "Samsung Galaxy"
+					devType = models.DeviceTypePhone
+				} else if strings.Contains(vendor, "Private Wi-Fi") {
+					hostname = "Smartphone / Mobile Device"
+					devType = models.DeviceTypePhone
+				} else if vendor != "Unknown Vendor" && vendor != "Generic Network Device" && vendor != "" {
+					hostname = fmt.Sprintf("%s Device", vendor)
+				}
+			}
 
 			rtt := alivePingHosts[targetIP]
 			if rtt == 0 {

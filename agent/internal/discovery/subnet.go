@@ -66,8 +66,8 @@ func DetectActiveSubnets() ([]models.SubnetInfo, error) {
 
 			mask := ipNet.Mask
 			ones, bits := mask.Size()
-			// Only allow subnets between /16 and /30 to prevent accidental /8 sweeps
-			if ones < 16 || ones > 30 {
+			// Only allow standard subnets (/22 to /30) to prevent massive sweeps
+			if ones < 22 || ones > 30 {
 				continue
 			}
 
@@ -87,7 +87,7 @@ func DetectActiveSubnets() ([]models.SubnetInfo, error) {
 			copy(gatewayIP, netIP)
 			gatewayIP[3]++
 
-			results = append(results, models.SubnetInfo{
+			info := models.SubnetInfo{
 				InterfaceName:  iface.Name,
 				IPAddress:      ip4.String(),
 				SubnetCIDR:     fmt.Sprintf("%s/%d", netIP.String(), ones),
@@ -96,7 +96,24 @@ func DetectActiveSubnets() ([]models.SubnetInfo, error) {
 				GatewayIP:      gatewayIP.String(),
 				TotalHosts:     totalHosts,
 				DNSServers:     []string{"1.1.1.1", "8.8.8.8"},
-			})
+			}
+
+			nameLower := strings.ToLower(iface.Name)
+			isVirtual := strings.Contains(nameLower, "virtual") ||
+				strings.Contains(nameLower, "vmnet") ||
+				strings.Contains(nameLower, "veth") ||
+				strings.Contains(nameLower, "hyper-v") ||
+				strings.Contains(nameLower, "vethernet") ||
+				strings.Contains(nameLower, "docker")
+
+			// Physical Wi-Fi / Ethernet gets top priority
+			if !isVirtual && (strings.Contains(nameLower, "wi-fi") || strings.Contains(nameLower, "wlan") || strings.Contains(nameLower, "ethernet")) {
+				results = append([]models.SubnetInfo{info}, results...)
+			} else if !isVirtual {
+				results = append([]models.SubnetInfo{info}, results...)
+			} else {
+				results = append(results, info)
+			}
 		}
 	}
 

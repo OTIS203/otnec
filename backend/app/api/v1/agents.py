@@ -69,7 +69,16 @@ def ingest_telemetry(report: IngestReport, db: Session = Depends(get_db)):
     if not network:
         stmt = select(Network)
         network = db.execute(stmt).scalars().first()
-        if not network:
+        if network:
+            network.cidr_v4 = report.subnet
+            network.name = f"Local Wi-Fi ({report.subnet})"
+            if report.subnet.startswith("192.168.0."):
+                network.gateway_ip = "192.168.0.1"
+            elif report.subnet.startswith("192.168.1."):
+                network.gateway_ip = "192.168.1.1"
+            db.commit()
+            db.refresh(network)
+        else:
             # Auto-provision local network and tenant
             stmt_tenant = select(Tenant)
             tenant = db.execute(stmt_tenant).scalars().first()
@@ -78,11 +87,12 @@ def ingest_telemetry(report: IngestReport, db: Session = Depends(get_db)):
                 db.add(tenant)
                 db.flush()
 
+            gw = "192.168.0.1" if report.subnet.startswith("192.168.0.") else "192.168.1.1"
             network = Network(
                 tenant_id=tenant.id,
-                name="Local Wi-Fi Subnet",
+                name=f"Local Wi-Fi ({report.subnet})",
                 cidr_v4=report.subnet,
-                gateway_ip="192.168.1.1",
+                gateway_ip=gw,
                 security_score=100,
             )
             db.add(network)
