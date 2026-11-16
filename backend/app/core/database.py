@@ -60,7 +60,7 @@ def init_db() -> None:
     Base.metadata.create_all(bind=engine)
 
     try:
-        from app.models.entities import Tenant, User, Network, ScheduledPolicy
+        from app.models.entities import Tenant, User, Network, FilterPolicy
         from app.core.security import get_password_hash
         from sqlalchemy import select
 
@@ -102,14 +102,17 @@ def init_db() -> None:
                 db.flush()
 
                 # Seed default business hours access policy
-                policy = ScheduledPolicy(
+                policy = FilterPolicy(
                     network_id=network.id,
-                    work_start="08:00",
-                    work_end="17:00",
-                    lunch_start="12:00",
-                    lunch_end="13:00",
-                    mon_fri_only=True,
-                    is_enabled=True,
+                    block_social_media=True,
+                    block_streaming=False,
+                    block_gaming=False,
+                    schedule_enabled=True,
+                    schedule_work_start="08:00",
+                    schedule_work_end="17:00",
+                    schedule_lunch_start="12:00",
+                    schedule_lunch_end="13:00",
+                    schedule_weekdays_only=True,
                 )
                 db.add(policy)
 
