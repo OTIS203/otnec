@@ -49,7 +49,7 @@ export default function FilteringPage() {
   const [saving, setSaving] = useState<boolean>(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [activeSetupTab, setActiveSetupTab] = useState<"router" | "ios" | "android" | "windows">("router");
-  const [showSetupGuide, setShowSetupGuide] = useState<boolean>(false);
+  const [showSetupGuide, setShowSetupGuide] = useState<boolean>(true);
 
   // Schedule Policy States
   const [scheduleEnabled, setScheduleEnabled] = useState<boolean>(false);
@@ -236,7 +236,18 @@ export default function FilteringPage() {
             Enforce scheduled work-hour policies, audit staff device lookups, and sinkhole distracting domains.
           </p>
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center space-x-2 px-3 py-1.5 bg-indigo-950/70 border border-indigo-500/40 rounded-lg text-xs font-mono shadow-sm">
+            <Radio className="w-3.5 h-3.5 text-indigo-400 animate-pulse" />
+            <span className="text-slate-400">DNS Server IP:</span>
+            <strong className="text-indigo-300 font-bold">{dnsStatus?.dns_ip || "192.168.1.246"}</strong>
+            <button
+              onClick={() => handleCopy(dnsStatus?.dns_ip || "192.168.1.246", "header_ip")}
+              className="ml-1 text-[11px] px-2 py-0.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded font-sans font-semibold transition"
+            >
+              {copiedKey === "header_ip" ? "Copied!" : "Copy"}
+            </button>
+          </div>
           <button
             onClick={() => setShowSetupGuide(!showSetupGuide)}
             className="flex items-center space-x-1.5 px-3 py-2 text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-indigo-300 rounded-lg border border-indigo-500/30 transition"
@@ -281,16 +292,14 @@ export default function FilteringPage() {
           <div className="flex items-center space-x-3">
             {policy?.schedule_status_text && (
               <span
-                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border flex items-center space-x-2 ${
-                  policy.is_schedule_active
-                    ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
-                    : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
-                }`}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold border flex items-center space-x-2 ${policy.is_schedule_active
+                  ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                  : "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                  }`}
               >
                 <span
-                  className={`w-2 h-2 rounded-full ${
-                    policy.is_schedule_active ? "bg-rose-400 animate-ping" : "bg-emerald-400"
-                  }`}
+                  className={`w-2 h-2 rounded-full ${policy.is_schedule_active ? "bg-rose-400 animate-ping" : "bg-emerald-400"
+                    }`}
                 />
                 <span>{policy.schedule_status_text}</span>
               </span>
@@ -336,14 +345,12 @@ export default function FilteringPage() {
             </div>
             <button
               onClick={() => setScheduleEnabled(!scheduleEnabled)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                scheduleEnabled ? "bg-indigo-600" : "bg-slate-700"
-              }`}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${scheduleEnabled ? "bg-indigo-600" : "bg-slate-700"
+                }`}
             >
               <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                  scheduleEnabled ? "translate-x-6" : "translate-x-1"
-                }`}
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${scheduleEnabled ? "translate-x-6" : "translate-x-1"
+                  }`}
               />
             </button>
           </div>
@@ -468,11 +475,11 @@ export default function FilteringPage() {
             </div>
             <div className="flex items-center space-x-2">
               <span className="text-xs text-slate-400 font-mono">
-                Primary: <strong className="text-indigo-300">{dnsStatus?.dns_ip || "192.168.0.101"}</strong>
+                Primary DNS: <strong className="text-indigo-300 font-bold text-sm">{dnsStatus?.dns_ip || "192.168.1.246"}</strong>
               </span>
               <button
-                onClick={() => handleCopy(dnsStatus?.dns_ip || "192.168.0.101", "primary")}
-                className="px-2 py-1 text-xs bg-indigo-600 text-white rounded font-medium"
+                onClick={() => handleCopy(dnsStatus?.dns_ip || "192.168.1.246", "primary")}
+                className="px-2.5 py-1 text-xs bg-indigo-600 hover:bg-indigo-500 text-white rounded font-medium transition"
               >
                 {copiedKey === "primary" ? "Copied" : "Copy IP"}
               </button>
@@ -480,17 +487,26 @@ export default function FilteringPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs text-slate-300">
-            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1">
-              <div className="font-bold text-indigo-300">1. Mobile Hotspot (Easiest)</div>
-              <p>Connect devices to Windows Hotspot <strong>OTIS DNS</strong>. NetScope will intercept 100% of DNS automatically on <code>192.168.137.1</code>.</p>
+            <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
+              <div className="font-bold text-indigo-300 flex items-center justify-between">
+                <span>1. Mobile Hotspot (Easiest)</span>
+                <span className="text-[10px] bg-indigo-900/60 text-indigo-300 px-1.5 py-0.5 rounded">Auto</span>
+              </div>
+              <p>Turn on Windows Hotspot <strong>OTIS DNS</strong>. Connect phones/laptops to it. OTNET intercepts all DNS on <code>192.168.137.1</code>.</p>
             </div>
-            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1">
-              <div className="font-bold text-indigo-300">2. Router DHCP Setup</div>
-              <p>Log in to router (192.168.0.1) &gt; DHCP Server &gt; Set Primary DNS to <code>{dnsStatus?.dns_ip || "192.168.0.101"}</code>.</p>
+            <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
+              <div className="font-bold text-indigo-300 flex items-center justify-between">
+                <span>2. Router DHCP Setup</span>
+                <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">All Devices</span>
+              </div>
+              <p>Log in to router (192.168.1.1) &gt; DHCP Server &gt; Set Primary DNS to <code>{dnsStatus?.dns_ip || "192.168.1.246"}</code>.</p>
             </div>
-            <div className="bg-slate-950 p-3 rounded-lg border border-slate-800 space-y-1">
-              <div className="font-bold text-indigo-300">3. Device Static DNS</div>
-              <p>On phone/laptop Wi-Fi settings, switch to Static IP and set DNS 1 to <code>{dnsStatus?.dns_ip || "192.168.0.101"}</code>.</p>
+            <div className="bg-slate-950 p-3.5 rounded-lg border border-slate-800 space-y-1.5">
+              <div className="font-bold text-indigo-300 flex items-center justify-between">
+                <span>3. Single Phone / PC DNS</span>
+                <span className="text-[10px] bg-slate-800 text-slate-300 px-1.5 py-0.5 rounded">Manual</span>
+              </div>
+              <p>In Wi-Fi settings on phone or PC, edit DNS (Static/Manual) and set DNS 1 to <code>{dnsStatus?.dns_ip || "192.168.1.246"}</code>.</p>
             </div>
           </div>
         </div>
@@ -541,9 +557,8 @@ export default function FilteringPage() {
             )}
           </div>
           <div
-            className={`text-xl font-bold mt-2 ${
-              policy?.block_social_media ? "text-rose-400" : "text-emerald-400"
-            }`}
+            className={`text-xl font-bold mt-2 ${policy?.block_social_media ? "text-rose-400" : "text-emerald-400"
+              }`}
           >
             {policy?.block_social_media ? "BLOCKING ACTIVE" : "UNRESTRICTED"}
           </div>
@@ -574,14 +589,12 @@ export default function FilteringPage() {
               <button
                 onClick={handleToggleSocialMedia}
                 disabled={saving}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  policy?.block_social_media ? "bg-rose-600" : "bg-slate-700"
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${policy?.block_social_media ? "bg-rose-600" : "bg-slate-700"
+                  }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    policy?.block_social_media ? "translate-x-6" : "translate-x-1"
-                  }`}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${policy?.block_social_media ? "translate-x-6" : "translate-x-1"
+                    }`}
                 />
               </button>
             </div>
@@ -595,14 +608,12 @@ export default function FilteringPage() {
               <button
                 onClick={handleToggleStreaming}
                 disabled={saving}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                  policy?.block_streaming ? "bg-rose-600" : "bg-slate-700"
-                }`}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${policy?.block_streaming ? "bg-rose-600" : "bg-slate-700"
+                  }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    policy?.block_streaming ? "translate-x-6" : "translate-x-1"
-                  }`}
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${policy?.block_streaming ? "translate-x-6" : "translate-x-1"
+                    }`}
                 />
               </button>
             </div>
@@ -793,13 +804,12 @@ export default function FilteringPage() {
                     <td className="py-2.5 px-3 font-mono text-indigo-300">{log.domain}</td>
                     <td className="py-2.5 px-3">
                       <span
-                        className={`px-2 py-0.5 rounded text-[10px] font-medium ${
-                          log.category === "Social Media"
-                            ? "bg-rose-500/15 text-rose-300 border border-rose-500/30"
-                            : log.category === "Streaming Video"
+                        className={`px-2 py-0.5 rounded text-[10px] font-medium ${log.category === "Social Media"
+                          ? "bg-rose-500/15 text-rose-300 border border-rose-500/30"
+                          : log.category === "Streaming Video"
                             ? "bg-amber-500/15 text-amber-300 border border-amber-500/30"
                             : "bg-slate-800 text-slate-300"
-                        }`}
+                          }`}
                       >
                         {log.category}
                       </span>
