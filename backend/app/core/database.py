@@ -23,13 +23,22 @@ engine_kwargs = {
 
 if "sqlite" in db_url:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
+    engine = create_engine(db_url, **engine_kwargs)
 else:
     # PostgreSQL / Supabase pool configuration
     engine_kwargs["pool_size"] = 10
     engine_kwargs["max_overflow"] = 20
     engine_kwargs["pool_recycle"] = 300
-
-engine = create_engine(db_url, **engine_kwargs)
+    try:
+        temp_engine = create_engine(db_url, **engine_kwargs)
+        with temp_engine.connect() as conn:
+            pass
+        engine = temp_engine
+        logger.info("Successfully connected to primary cloud PostgreSQL database.")
+    except Exception as e:
+        logger.warning(f"Cloud database unreachable ({e}). Automatically falling back to local SQLite database.")
+        db_url = "sqlite:///./netscope.db"
+        engine = create_engine(db_url, echo=False, pool_pre_ping=True, connect_args={"check_same_thread": False})
 
 SessionLocal = sessionmaker(
     bind=engine,
